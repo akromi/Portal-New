@@ -1,0 +1,461 @@
+/* /mnt/data/custom.css */
+:root {
+  /* Color Palette */
+  --error-color: #d3080c;
+  --focus-color: #1a5a96;
+  --text-dark: #000;
+  --text-muted: #555;
+  --border-default: #ddd;
+  
+  /* Shadows & Effects */
+  --error-shadow: 0 0 0 2px rgba(211, 8, 12, 0.25);
+  --focus-outline: 2px solid var(--focus-color);
+  
+  /* Calendar Icon Sizes */
+  --pp-cal-icon: 2.175rem;     /* Visual glyph size */
+  --pp-cal-hit: 3.375rem;       /* Clickable button area */
+  --pp-cal-right: 0.65rem;      /* Distance from right edge */
+  --pp-cal-ring: 0.275rem;      /* Visual ring padding around glyph */
+  --pp-cal-focus-w: 2px;        /* Focus ring stroke width */
+
+  /* Z-Index */
+  --z-datepicker: 11000;
+  /* === SELECT CHEVRON (wrapper .select-icon with <i class="fas fa-chevron-down">) === */
+  /* tweak to taste */
+  --select-chevron-size: 1.35rem;   /* slightly larger */
+  --select-chevron-right: 0.65rem;  /* distance from right edge */
+
+}
+
+/* ==================== GENERIC UTILS ==================== */
+
+.wb-inv {
+  position: absolute !important;
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.form-control[readonly],
+input[readonly] {
+  background-color: #f8f9fa !important;
+  cursor: not-allowed !important;
+}
+
+/* ==================== BASE INPUTS ==================== */
+
+.form-control,
+input[type="text"],
+input[type="date"],
+input[type="time"],
+input[type="number"] {
+  font-size: 16px;
+  line-height: 35px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+/* Ensure native pickers show indicators */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: block;
+  opacity: 1;
+  color: inherit;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: block;
+  opacity: 1;
+}
+
+/* ==================== FORM FIELD STATES ==================== */
+
+.form-control.error,
+input.error,
+select.error,
+textarea.error {
+  border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+  outline: none;
+}
+
+/* Container-level error state */
+.has-error .form-control,
+.has-error .form-control:focus {
+  border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+}
+
+/* ==================== FOCUS STATES ==================== */
+
+/* Standard focus */
+.form-control:focus,
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 0.2rem rgba(26, 90, 150, 0.25);
+  outline: 0;
+}
+
+/* ==================== INPUT GROUPS (INSIDE ICON) ==================== */
+
+.input-group.pp-inside {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.input-group.pp-inside > input.form-control {
+  padding-right: calc(var(--pp-cal-hit) + var(--pp-cal-right));
+}
+
+.input-group.pp-inside > .input-group-addon.btn,
+.input-group.pp-inside > [role="button"].input-group-addon {
+  position: absolute;
+  top: 50%;
+  right: var(--pp-cal-right);
+  transform: translateY(-50%);
+  width: var(--pp-cal-hit);
+  height: var(--pp-cal-hit);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+}
+
+/* disable pointer on glyph so button gets the click */
+.input-group.pp-inside .input-group-addon.btn svg,
+.input-group.pp-inside [role="button"].input-group-addon svg {
+  pointer-events: none;
+}
+
+/* Date group — ensure positioning */
+.input-group.datetimepicker.pp-inside {
+  position: relative;
+}
+
+/* ==================== CALENDAR ICON (DATE) ==================== */
+
+.input-group.datetimepicker.pp-inside .icon-calendar,
+.input-group.datetimepicker.pp-inside .fa-calendar {
+  display: none !important; /* replace with svg.pp-cal */
+}
+
+/* Calendar button base */
+.input-group.datetimepicker.pp-inside > .input-group-addon.btn,
+.input-group.datetimepicker.pp-inside > [role="button"].input-group-addon {
+  position: absolute;
+  top: 50%;
+  right: var(--pp-cal-right);
+  transform: translateY(-50%);
+  width: var(--pp-cal-hit);
+  height: var(--pp-cal-hit);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+}
+
+/* ==================== FOCUS RING FOR CALENDAR BUTTON ==================== */
+
+/* Remove default outline */
+.input-group.datetimepicker.pp-inside > .input-group-addon.btn:focus-visible {
+  outline: none;
+}
+
+/* Custom focus ring around icon only (compact) */
+.input-group.datetimepicker.pp-inside > .input-group-addon.btn:focus-visible::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--pp-cal-icon) + 2 * var(--pp-cal-ring));
+  height: calc(var(--pp-cal-icon) + 2 * var(--pp-cal-ring));
+  transform: translate(-50%, -50%);
+  border: var(--pp-cal-focus-w) solid var(--focus-color);
+  border-radius: 0.375rem;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* High-contrast */
+@media (forced-colors: active) {
+  .input-group.datetimepicker.pp-inside > .input-group-addon.btn:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .input-group.datetimepicker.pp-inside > .input-group-addon.btn:focus-visible::after {
+    content: none;
+  }
+}
+
+/* ==================== CLOCK ICON (TIME) ==================== */
+
+/* Time-only group button base (same geometry as calendar) */
+.input-group.pp-inside[data-pp-time-only="1"] > .input-group-addon.btn,
+.input-group.pp-inside[data-pp-time-only="1"] > [role="button"].input-group-addon {
+  position: absolute;
+  top: 50%;
+  right: var(--pp-cal-right);
+  transform: translateY(-50%);
+  width: var(--pp-cal-hit);
+  height: var(--pp-cal-hit);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+}
+
+/* FOCUS RING FOR TIME BUTTON (MATCH CALENDAR EXACTLY) */
+.input-group.pp-inside[data-pp-time-only="1"] > .input-group-addon.btn[data-wet4-time-btn="1"]:focus-visible,
+.input-group.pp-inside[data-pp-time-only="1"] > [role="button"].input-group-addon[data-wet4-time-btn="1"]:focus-visible {
+  outline: none;
+}
+
+.input-group.pp-inside[data-pp-time-only="1"] > .input-group-addon.btn[data-wet4-time-btn="1"]:focus-visible::after,
+.input-group.pp-inside[data-pp-time-only="1"] > [role="button"].input-group-addon[data-wet4-time-btn="1"]:focus-visible::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--pp-cal-icon) + 2 * var(--pp-cal-ring));
+  height: calc(var(--pp-cal-icon) + 2 * var(--pp-cal-ring));
+  transform: translate(-50%, -50%);
+  border: var(--pp-cal-focus-w) solid var(--focus-color);
+  border-radius: 0.375rem;     /* same rounding as calendar */
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* High-contrast support */
+@media (forced-colors: active) {
+  .input-group.pp-inside[data-pp-time-only="1"] > .input-group-addon.btn[data-wet4-time-btn="1"]:focus-visible,
+  .input-group.pp-inside[data-pp-time-only="1"] > [role="button"].input-group-addon[data-wet4-time-btn="1"]:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  .input-group.pp-inside[data-pp-time-only="1"] > .input-group-addon.btn[data-wet4-time-btn="1"]:focus-visible::after,
+  .input-group.pp-inside[data-pp-time-only="1"] > [role="button"].input-group-addon[data-wet4-time-btn="1"]:focus-visible::after {
+    content: none;
+  }
+}
+
+/* ==================== GLYPH SIZE (CALENDAR + CLOCK) ==================== */
+
+/* Canonical size for both calendar (pp-cal) and clock (pp-clock).
+   Keep this at the end of glyph-size rules so it wins the cascade. */
+.input-group .input-group-addon.btn svg.pp-cal,
+.input-group .input-group-addon.btn svg.pp-clock,
+.input-group [role="button"].input-group-addon svg.pp-cal,
+.input-group [role="button"].input-group-addon svg.pp-clock {
+  width: var(--pp-cal-icon) !important;
+  height: var(--pp-cal-icon) !important;
+  display: block;
+  margin: 0 auto;
+}
+
+/* ==================== POWER PAGES DATETIME WIDGETS ==================== */
+
+/* Datepicker popup z-index */
+.bootstrap-datetimepicker-widget,
+.tempus-dominus-widget,
+.datetimepicker-widget,
+.picker__box {
+  z-index: var(--z-datepicker);
+}
+
+/* ==================== INSIDE-INPUT CALENDAR/TIME WRAPPERS ==================== */
+
+/* Ensure wrapper has room for icon */
+.form-control-cell .input-group.pp-inside input.form-control {
+  padding-right: calc(var(--pp-cal-hit) + var(--pp-cal-right));
+}
+
+/* Button hover states (optional) */
+.input-group.pp-inside > .input-group-addon.btn:hover,
+.input-group.datetimepicker.pp-inside > .input-group-addon.btn:hover {
+  background: rgba(0,0,0,.03);
+  border-color: rgba(0,0,0,.08);
+}
+
+/* Disabled button appearance */
+.input-group.pp-inside > .input-group-addon.btn[disabled],
+.input-group.datetimepicker.pp-inside > .input-group-addon.btn[disabled] {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ==================== VALIDATION STAR (VISIBILITY ONLY) ==================== */
+.validators span[id^="RequiredFieldValidator"] {
+  font-weight: bold;
+  color: var(--error-color);
+}
+
+.validators span[id^="DateFormatValidator"] {
+  color: var(--error-color);
+}
+
+/* ==================== ACCESSIBILITY/HC FALLBACKS ==================== */
+@media (forced-colors: active) {
+  .form-control:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+}
+
+/* === Select with inline <i class="fas fa-chevron-down"> caret ================= */
+
+/* Make the wrapper the positioning context */
+.form-control-cell .select-icon,
+.select-icon {
+  position: relative;
+  display: block;       /* ensure the wrapper spans the select width */
+  overflow: visible;    /* don't clip the caret */
+}
+
+/* Pad the select so text doesn't run under the caret; hide native arrows */
+.select-icon > select,
+.select-icon > select.form-control {
+  padding-right: 2.25rem;          /* room for the caret */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background: none !important;      /* don't draw background chevrons */
+}
+select::-ms-expand { display: none; }  /* legacy IE/Edge arrow */
+
+/* Position the Font Awesome caret INSIDE the field, right aligned, centered */
+.select-icon > i.fas.fa-chevron-down,
+.select-icon > i.fa.fa-chevron-down,
+.select-icon > i[class*="fa-chevron-down"] {
+  position: absolute;
+  right: 0.75rem;                   /* tweak if needed */
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;                  /* caret size */
+  line-height: 1;
+  color: #666;
+  pointer-events: none;             /* clicks go to the select */
+  z-index: 2;
+}
+
+/* Match focus visuals: recolor caret when the select is focused */
+.select-icon:focus-within > i[class*="fa-chevron-down"] {
+  color: var(--focus-color);
+}
+
+/* If a select sits in an input-group with a right addon, give extra space */
+.input-group > .select-icon > select.form-control {
+  padding-right: 2.75rem;
+}
+/* === FIX: keep <i class="fa-chevron-down"> inside the select =============== */
+
+/* 1) Make the wrapper the positioning context */
+.form-control-cell .select-icon,
+.select-icon {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* 2) Force padding-right even if inline padding is present */
+.select-icon > select,
+.select-icon > select.form-control {
+  width: 100%;
+  box-sizing: border-box;
+
+  /* Beat inline "padding: 0 12px" so we reserve room for the chevron */
+  padding-right: 2.5rem !important;
+
+  /* Normalize native arrows/backgrounds across browsers */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none !important;   /* avoid any bg chevrons */
+}
+
+/* Legacy IE/old Edge arrow */
+select::-ms-expand { display: none; }
+
+/* 3) Position the Font Awesome chevron INSIDE the right edge */
+.select-icon > i.fas.fa-chevron-down,
+.select-icon > i.fa.fa-chevron-down,
+.select-icon > i[class*="fa-chevron-down"] {
+  position: absolute;
+  right: 0.75rem;                 /* adjust if needed */
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  line-height: 1;
+  color: #666;
+  pointer-events: none;           /* clicks go to the select */
+  z-index: 2;
+}
+
+/* 4) Optional: match focus visuals with your inputs */
+.select-icon:focus-within > i[class*="fa-chevron-down"] { color: #333; }
+
+.select-icon {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Ensure room for the chevron even if inline padding exists */
+.select-icon > select {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: calc(var(--select-chevron-size) + var(--select-chevron-right) + 12px) !important;
+
+  /* hide native arrows/backgrounds so they don't fight the FA chevron */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none !important;
+}
+select::-ms-expand { display: none; } /* legacy IE/old Edge */
+
+.select-icon > i.fas.fa-chevron-down,
+.select-icon > i.fa.fa-chevron-down,
+.select-icon > i[class*="fa-chevron-down"] {
+  position: absolute;
+  top: 50%;
+  right: var(--select-chevron-right);
+  transform: translateY(-50%);
+  font-size: var(--select-chevron-size);
+  line-height: 1;
+  color: inherit;        /* match input text color */
+  pointer-events: none;  /* clicks still hit the select */
+}
+
+/* optional: change chevron color when the select is focused */
+.select-icon:focus-within > i[class*="fa-chevron-down"] {
+  color: #333;
+}
+
+/* high-contrast support */
+@media (forced-colors: active) {
+  .select-icon > i[class*="fa-chevron-down"] { color: ButtonText; }
+}
