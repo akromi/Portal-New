@@ -1,0 +1,119 @@
+/**
+ * validators.css - Optimized Version
+ * Form validation states, radio groups, file uploads, date/time pickers
+ */
+
+/* ==================== INLINE ERROR MESSAGES ==================== */
+
+span.wrapped {
+  display: inline-block;
+  width: 100%;
+  text-wrap: auto;
+  text-align: left;
+  padding: 5px;
+}
+
+/* ==================== DATE/TIME PICKER ERROR STATES ==================== */
+
+/* Hide bound input (accessibility-friendly method) */
+.control > input.datetime.form-control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Paint the visible PP date/time input when invalid */
+.form-control-cell .input-group.datetimepicker input.form-control.error,
+.form-control-cell .input-group.datetimepicker input.input-text-box.error,
+.form-control-cell .input-group.datetimepicker input[aria-invalid="true"] {
+  border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+}
+
+/* Keep it red while focused */
+.form-control-cell .input-group.datetimepicker input.form-control.error:focus,
+.form-control-cell .input-group.datetimepicker input.input-text-box.error:focus,
+.form-control-cell .input-group.datetimepicker input[aria-invalid="true"]:focus {
+  border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+  outline: none;
+}
+
+/* Wrapper error classes */
+.form-control-cell.error .input-group.datetimepicker input.form-control,
+.form-control-cell.has-error .input-group.datetimepicker input.form-control,
+.form-control-cell.error .input-group.datetimepicker input.input-text-box,
+.form-control-cell.has-error .input-group.datetimepicker input.input-text-box {
+  border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+}
+
+/* ==================== WET-PATCHED RADIO GROUPS ==================== */
+
+/* Fieldset & Legend */
+.wet-patched-radio fieldset.wet-radio-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.wet-patched-radio fieldset.wet-radio-fieldset > legend {
+  font-size: 16px;
+  color: var(--text-dark);
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 0.25rem 0;
+  padding: 0;
+}
+
+/* Ensure child elements inherit legend styling */
+.wet-patched-radio legend .field-label,
+.wet-patched-radio legend .field-name {
+  font: inherit;
+  color: inherit;
+  font-weight: inherit;
+}
+
+/* Inline layout: "○ No  ○ Yes" */
+.wet-patched-radio label.radio-inline {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1.5rem;
+  white-space: nowrap;
+}
+
+.wet-patched-radio label.radio-inline input[type="radio"] {
+  position: static;
+  margin: 0 0.45rem 0 0;
+  vertical-align: middle;
+}
+
+/* Touch-friendly radio padding */
+@media (pointer: coarse) {
+  .wet-patched-radio label.radio-inline {
+    padding: 0.45rem 0.6rem;
+  }
+}
+
+/* ==================== FILE UPLOAD CONTROLS ==================== */
+
+/* File name as clickable link */
+.file-name--clickable {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Touch-friendly file buttons */
+@media (pointer: coarse) {
+  .file-control-container button,
+  .container-file-input button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
