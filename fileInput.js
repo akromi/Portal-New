@@ -1021,3 +1021,302 @@ function validateLoginSession(data, textStatus, jqXHR, onSuccess) {
     return Array.isArray(ids) ? ids.reduce(function(c,id){ return c + (patchRadioGroup(id)?1:0); }, 0) : 0;
   };
 })();
+
+/* ============================================================
+   PortalDateTimeUX - Native date/time input UX enhancements
+   - Remove WebKit ghost text when empty
+   - Allow keyboard typing with smart normalization
+   - Locale-aware (EN 12h AM/PM, FR 24h)
+   - Keep native pickers functional
+   ============================================================ */
+(function (window, $) {
+  'use strict';
+
+  if (!$ || !$.fn) {
+    console.warn('[PortalDateTimeUX] jQuery not available; skipping init');
+    return;
+  }
+
+  const LOG = {
+    info: (...a) => console.log('[DateTimeUX]', ...a),
+    warn: (...a) => console.warn('[DateTimeUX]', ...a),
+    err: (...a) => console.error('[DateTimeUX]', ...a)
+  };
+
+  /**
+   * Detect locale from html lang or data-lang attribute
+   * @param {HTMLElement} [root=document.documentElement] - root element to check
+   * @returns {string} 'en' | 'fr'
+   */
+  function detectLocale(root) {
+    const el = root || document.documentElement;
+    const lang = (el.getAttribute('lang') || el.getAttribute('data-lang') || 'en').toLowerCase();
+    return lang.startsWith('fr') ? 'fr' : 'en';
+  }
+
+  /**
+   * Normalize date text to YYYY-MM-DD
+   * Accepts: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD, YYYYMMDD
+   * @param {string} raw - raw user input
+   * @returns {string} normalized YYYY-MM-DD or empty string if invalid
+   */
+  function normalizeDateText(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    
+    let cleaned = raw.trim();
+    if (!cleaned) return '';
+
+    // Already in correct format?
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+      // Validate it's a real date
+      const [y, m, d] = cleaned.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      if (dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d) {
+        return cleaned;
+      }
+      return '';
+    }
+
+    // Replace / or . with -
+    cleaned = cleaned.replace(/[/.]/g, '-');
+
+    // Check if it's compact format YYYYMMDD (8 digits)
+    if (/^\d{8}$/.test(cleaned)) {
+      const y = parseInt(cleaned.substring(0, 4), 10);
+      const m = parseInt(cleaned.substring(4, 6), 10);
+      const d = parseInt(cleaned.substring(6, 8), 10);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      if (dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d) {
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      }
+      return '';
+    }
+
+    // Try parsing YYYY-MM-DD after replacement
+    const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(cleaned);
+    if (match) {
+      const y = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const d = parseInt(match[3], 10);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      if (dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d) {
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Normalize time text to HH:mm
+   * EN: accepts h[:mm] AM/PM (case-insensitive) → 24h
+   * FR: accepts HH:mm or H or Hmm → HH:mm
+   * @param {string} raw - raw user input
+   * @param {string} locale - 'en' | 'fr'
+   * @returns {string} normalized HH:mm or empty string if invalid
+   */
+  function normalizeTimeText(raw, locale) {
+    if (!raw || typeof raw !== 'string') return '';
+    
+    let cleaned = raw.trim();
+    if (!cleaned) return '';
+
+    // Already in correct HH:mm format?
+    if (/^([01]?\d|2[0-3]):([0-5]\d)$/.test(cleaned)) {
+      const [h, m] = cleaned.split(':').map(Number);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    const isEn = (locale || 'en').toLowerCase() === 'en' || locale === 'fr' ? false : true;
+
+    // Try parsing with AM/PM (EN style, but also accept in FR)
+    const ampmMatch = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i.exec(cleaned);
+    if (ampmMatch) {
+      let h = parseInt(ampmMatch[1], 10);
+      const m = parseInt(ampmMatch[2] || '0', 10);
+      const period = ampmMatch[3].toLowerCase();
+
+      if (h < 1 || h > 12 || m < 0 || m > 59) return '';
+
+      // Convert to 24h
+      if (period === 'am') {
+        if (h === 12) h = 0; // 12 AM = 00:xx
+      } else {
+        if (h !== 12) h += 12; // PM: add 12 except for 12 PM
+      }
+
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    // Try parsing 24h format variations
+    // H or HH (no minutes)
+    if (/^\d{1,2}$/.test(cleaned)) {
+      const h = parseInt(cleaned, 10);
+      if (h >= 0 && h <= 23) {
+        return `${String(h).padStart(2, '0')}:00`;
+      }
+      return '';
+    }
+
+    // Hmm or HHmm (compact)
+    if (/^\d{3,4}$/.test(cleaned)) {
+      let h, m;
+      if (cleaned.length === 3) {
+        h = parseInt(cleaned.substring(0, 1), 10);
+        m = parseInt(cleaned.substring(1, 3), 10);
+      } else {
+        h = parseInt(cleaned.substring(0, 2), 10);
+        m = parseInt(cleaned.substring(2, 4), 10);
+      }
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+      return '';
+    }
+
+    // H:mm or HH:mm (with potential single-digit hour)
+    const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(cleaned);
+    if (timeMatch) {
+      const h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Update has-value class based on input value
+   */
+  function updateValueClass($input) {
+    const hasVal = !!($input.val() || '').trim();
+    $input.toggleClass('has-value', hasVal);
+  }
+
+  /**
+   * Initialize date fields
+   * @param {string|jQuery} selectorOr$els - selector or jQuery object
+   * @param {Object} [opts] - options (reserved for future)
+   */
+  function initDateFields(selectorOr$els, opts) {
+    const $fields = (selectorOr$els && selectorOr$els.jquery) ? selectorOr$els : $(selectorOr$els);
+    if (!$fields.length) {
+      LOG.warn('initDateFields: no fields found', selectorOr$els);
+      return;
+    }
+
+    const locale = detectLocale();
+    const lang = locale === 'fr' ? 'fr-CA' : 'en-CA';
+
+    $fields.each(function () {
+      const $el = $(this);
+      
+      // Skip if already initialized
+      if ($el.data('portalDateTimeUX')) return;
+      $el.data('portalDateTimeUX', true);
+
+      // Ensure it's type=date
+      if ($el.attr('type') !== 'date') {
+        LOG.warn('initDateFields: field is not type=date', this.id);
+        return;
+      }
+
+      // Set attributes
+      $el.attr('lang', lang);
+      $el.attr('inputmode', 'numeric');
+      $el.addClass('no-ghost');
+
+      // Update has-value class on load
+      updateValueClass($el);
+
+      // Bind events
+      $el.off('.portalDateTimeUX').on('blur.portalDateTimeUX', function () {
+        const raw = $el.val();
+        const normalized = normalizeDateText(raw);
+        
+        if (raw && normalized && raw !== normalized) {
+          $el.val(normalized);
+          // Trigger change to notify validators
+          $el.trigger('change');
+          LOG.info('Date normalized:', raw, '→', normalized);
+        }
+        
+        updateValueClass($el);
+      }).on('input.portalDateTimeUX change.portalDateTimeUX', function () {
+        updateValueClass($el);
+      });
+
+      LOG.info('initDateFields: initialized', this.id, 'lang=' + lang);
+    });
+  }
+
+  /**
+   * Initialize time fields
+   * @param {string|jQuery} selectorOr$els - selector or jQuery object
+   * @param {Object} [opts] - options (reserved for future)
+   */
+  function initTimeFields(selectorOr$els, opts) {
+    const $fields = (selectorOr$els && selectorOr$els.jquery) ? selectorOr$els : $(selectorOr$els);
+    if (!$fields.length) {
+      LOG.warn('initTimeFields: no fields found', selectorOr$els);
+      return;
+    }
+
+    const locale = detectLocale();
+
+    $fields.each(function () {
+      const $el = $(this);
+      
+      // Skip if already initialized
+      if ($el.data('portalDateTimeUX')) return;
+      $el.data('portalDateTimeUX', true);
+
+      // Ensure it's type=time
+      if ($el.attr('type') !== 'time') {
+        LOG.warn('initTimeFields: field is not type=time', this.id);
+        return;
+      }
+
+      // Set attributes
+      $el.attr('step', '60'); // minutes granularity
+      $el.attr('inputmode', 'numeric');
+      $el.addClass('no-ghost');
+
+      // Update has-value class on load
+      updateValueClass($el);
+
+      // Bind events
+      $el.off('.portalDateTimeUX').on('blur.portalDateTimeUX', function () {
+        const raw = $el.val();
+        const normalized = normalizeTimeText(raw, locale);
+        
+        if (raw && normalized && raw !== normalized) {
+          $el.val(normalized);
+          // Trigger change to notify validators
+          $el.trigger('change');
+          LOG.info('Time normalized:', raw, '→', normalized, 'locale=' + locale);
+        }
+        
+        updateValueClass($el);
+      }).on('input.portalDateTimeUX change.portalDateTimeUX', function () {
+        updateValueClass($el);
+      });
+
+      LOG.info('initTimeFields: initialized', this.id, 'locale=' + locale);
+    });
+  }
+
+  // Export to window
+  window.PortalDateTimeUX = {
+    detectLocale: detectLocale,
+    normalizeDateText: normalizeDateText,
+    normalizeTimeText: normalizeTimeText,
+    initDateFields: initDateFields,
+    initTimeFields: initTimeFields
+  };
+
+  LOG.info('PortalDateTimeUX library loaded');
+
+})(window, window.jQuery);
