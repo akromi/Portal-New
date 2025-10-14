@@ -58,6 +58,12 @@ $(document).ready(function(){
   $("#ethi_embarkationdate").attr("type", "date");
   $("#ethi_disembarkationdate").attr("type", "date");
 
+  // Initialize date/time UX enhancements (ghost text removal, keyboard normalization)
+  if (window.PortalDateTimeUX) {
+    PortalDateTimeUX.initDateFields('#ethi_nextcanadadate, #ethi_embarkationdate, #ethi_disembarkationdate');
+    PortalDateTimeUX.initTimeFields('#ethi_nextcanadatime');
+  }
+
 
   $("select").each(function () {
     if (!$(this).parent().hasClass("select-icon")) {
