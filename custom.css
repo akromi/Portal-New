@@ -459,3 +459,19 @@ select::-ms-expand { display: none; } /* legacy IE/old Edge */
 @media (forced-colors: active) {
   .select-icon > i[class*="fa-chevron-down"] { color: ButtonText; }
 }
+
+/* Read-only summary: hide required asterisks and validator stars */
+.crmEntityFormView .table-info.required .field-label::after,
+.crmEntityFormView label.required::after,
+.crmEntityFormView .required .field-label::after,
+.crmEntityFormView abbr[title="required"],
+.crmEntityFormView abbr[title="(required)"],
+.crmEntityFormView .validators span {
+  content: none !important;
+  display: none !important;
+}
+/* Optional: ensure no leftover spacing from hidden validators */
+body.read-only-summary .crmEntityFormView .table-info .validators {
+  margin: 0 !important;
+  padding: 0 !important;
+}
