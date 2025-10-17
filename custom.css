@@ -72,6 +72,20 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   opacity: 1;
 }
 
+/* Content links only; leave buttons/nav alone */
+main a[href]:not(.btn):not([role="button"]),
+#wb-main a[href]:not(.btn):not([role="button"]) {
+  text-decoration-line: underline !important;
+  text-underline-offset: 0.12em;
+  text-decoration-skip-ink: auto;
+}
+
+a[href]:not(.btn):not([role="button"]) {
+  text-decoration-line: underline !important;
+  text-underline-offset: 0.12em;
+  text-decoration-skip-ink: auto;
+}
+
 /* ==================== FORM FIELD STATES ==================== */
 
 .form-control.error,
@@ -476,31 +490,17 @@ body.read-only-summary .crmEntityFormView .table-info .validators {
   padding: 0 !important;
 }
 
-/* ==================== DATE/TIME GHOST TEXT REMOVAL ==================== */
-
-/* Hide WebKit date/time ghost text when empty and not focused */
-input[type="date"].no-ghost:not(:focus)::-webkit-datetime-edit,
-input[type="time"].no-ghost:not(:focus)::-webkit-datetime-edit {
-  color: transparent;
-  user-select: none;
+/* Make the (wrapped) input stretch to 100% and look consistent */
+.form-control { position: relative; display: block; width: 100%; }
+.form-control > input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;              /* match your form baseline */
+  line-height: 35px;            /* your requested height */
+  height: 35px;
+  padding: 0 2.25rem 0 12px;    /* room for icon on the right, label on left */
 }
 
-/* Show ghost text when focused (user is typing) */
-input[type="date"].no-ghost:focus::-webkit-datetime-edit,
-input[type="time"].no-ghost:focus::-webkit-datetime-edit {
-  color: inherit;
-}
 
-/* Show text when field has a value (has-value class added by JS) */
-input[type="date"].no-ghost.has-value::-webkit-datetime-edit,
-input[type="time"].no-ghost.has-value::-webkit-datetime-edit {
-  color: inherit;
-}
 
-/* Ensure calendar/clock picker icons remain visible and clickable */
-input[type="date"].no-ghost::-webkit-calendar-picker-indicator,
-input[type="time"].no-ghost::-webkit-calendar-picker-indicator {
-  display: block;
-  opacity: 1;
-  cursor: pointer;
-}
+
