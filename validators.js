@@ -293,19 +293,29 @@ function validatePositiveNumberOnly(source) {
    return rgxNumberOnly.test(numberOnly);
 }
 
-// Validates if a file is selected - returns true if valid, false otherwise
-function validateFileSelected(source) {
-  const $inp = $("#" + source.controltovalidate + "_input_file");
-  // Works for native file inputs and PP’s value fallback
-  const hasFiles = $inp[0] && $inp[0].files && $inp[0].files.length >= 0;
-  const hasValue = !!$inp.val();
-  return hasFiles || hasValue;
-}
-
 // Small shared helper — same targeting pattern you use elsewhere
 function _fileInputFor(src){
   var baseId = src && src.controltovalidate ? src.controltovalidate : '';
   return document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
+}
+// Validates if a file is selected - returns true if valid, false otherwise
+function validateFileSelected(source) {
+  // Prefer the visible file input; fall back to base id
+  var fin = _fileInputFor(source);
+  if (!fin) {
+    // If the control can't be located, fail closed for "required"
+    // so we don't accidentally pass a required field silently.
+    return false;
+  }
+
+  // Native file list (most reliable)
+  if (fin.files && typeof fin.files.length === 'number') {
+    return fin.files.length > 0;
+  }
+
+  // Fallback: value attribute (older browsers)
+  var val = (fin.value || '').trim();
+  return val.length > 0;
 }
 
 /**
@@ -316,10 +326,10 @@ function _fileInputFor(src){
  */
 function validateFileNotZero(src){
   var fin = _fileInputFor(src);
-  if (!fin) return true;                         // can't validate → don't block
+  if (!fin) return true; // can't validate → don't block
   var f = fin.files && fin.files[0];
-  if (!f) return true;                           // no new file → let "required" handle presence
-  return f.size !== 0;                           // only fail on exactly zero
+  if (!f) return true;   // no new file → let "required" handle presence
+  return f.size !== 0;   // only fail on exactly zero
 }
 
 /**
@@ -348,20 +358,19 @@ function validateFileMaxSize(src){
   return f.size <= maxBytes;
 }
 
-
 // Accept only: PDF, JPG, PNG, GIF
 function validateFileType(source) {
-  const allowed = new Set(['pdf', 'jpg', 'png', 'gif']); // hard-coded
+  const allowed = new Set(['pdf', 'jpg', 'png', 'gif']); // hard-coded set per requirements
 
   // Power Pages: try *_input_file first, then raw id
   let $inp = $('#' + source.controltovalidate + '_input_file');
   if (!$inp.length) $inp = $('#' + source.controltovalidate);
 
   const el = $inp.get(0);
-  if (!el || !el.files || el.files.length === 0) return true; // nothing selected
+  if (!el || !el.files || el.files.length === 0) return true; // nothing selected → let "required" handle presence
 
   const file = el.files[0]; // only check the first file
-  const name = String(file.name || '');
+  const name = String(file.name || '').trim();
   const dot = name.lastIndexOf('.');
   if (dot <= 0) return false; // no extension or starts with '.'
 
