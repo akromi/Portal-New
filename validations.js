@@ -87,13 +87,132 @@ function removeAccessibilityMods(id) {
 
 // PRIVATE
 // PRIVATE
+// function globalEvaluationFunction() {
+//   // 1) Clear older inline messages
+//   for (var i = 0; i < Page_Validators.length; i++) {
+//     var v0 = Page_Validators[i];
+//     var id0 = String(v0.controltovalidate || '');
+//     $('#'+id0+'_label > span[id='+id0+'_err]').remove();
+//     $('#'+id0+'_label > br').remove();
+//   }
+
+//   // 2) Collect invalid validators → de-dupe by logical field
+//   var seen = Object.create(null);
+//   var items = []; // { id, type, msg }
+
+//   for (var j = 0; j < Page_Validators.length - 1; j++) { // skip our global
+//     var v = Page_Validators[j];
+//     if (v.isvalid !== false) continue;
+
+//     var id = String(v.controltovalidate || '');
+
+//     // Ignore PP's hidden file validators (both ..._hidden_* and ...hidden_*)
+//     if (/_hidden_(filename|filetype)$/.test(id) || /(hidden_)(filename|filetype)$/.test(id))
+//       continue;
+
+//     // Normalize to the base (logical) field id (strip partner suffixes)
+//     var base = id.replace(/(_datepicker(_description)?|_timepicker(_description)?|_name|_value|_entityname|_text|_input_file)$/,'');
+//     if (seen[base]) continue;   // keep ONE reason per field
+//     seen[base] = true;
+
+//     var link = $(v.errormessage);
+//     var text = link.text();
+//     var msg  = (currentLang === 'en'
+//       ? 'Error '  + (items.length+1) + ': ' + text
+//       : 'Erreur ' + (items.length+1) + ' : ' + text);
+
+//    var inferredType = v.type || (
+//   document.getElementById(base + '_datepicker_description') || document.getElementById(base + '_datepicker') ? 'date' :
+//   document.getElementById(base + '_timepicker_description') || document.getElementById(base + '_timepicker') ? 'time' :
+//   ($('#' + base).is('select') ? 'lookup' : '')
+// );
+// items.push({ id: base, type: inferredType, msg: msg });
+//   }
+
+//   // 3) Repaint inline (single message per field)
+//   for (var k = 0; k < items.length; k++) {
+//     updateLabelErrorMessage(items[k].id, items[k].type, items[k].msg);
+//   }
+
+//   // // 4) Rebuild the summary list to exactly match the de-duped items
+//   // if (items.length > 0) {
+//   //   setTimeout(function () {
+//   //     var focused = $(':focus');
+//   //     var $sum = $('#ValidationSummaryEntityFormView');
+//   //     var $ul  = $sum.find('> ul');
+
+//   //     $ul.empty();
+//   //     items.forEach(function (it) {
+//   //       var $a = $('<a/>', {
+//   //         href: '#' + it.id + '_label',
+//   //         onclick: 'javascript:scrollToAndFocus("' + it.id + '_label","' + it.id + '"); return false;',
+//   //         text: it.msg
+//   //       });
+//   //       $ul.append($('<li/>').append($a));
+//   //     });
+
+//   //     var n = items.length;
+//   //     $sum.find('> h2').text(
+//   //       currentLang === 'en'
+//   //         ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+//   //         : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
+//   //     );
+
+//   //     $sum.find('a').css('text-decoration', 'underline');
+//   //     $sum.blur().show();
+//   //     focused.focus();
+//   //   }, 250);
+
+//   // 4) Rebuild the summary list to exactly match the de-duped items
+// setTimeout(function () {
+//   var focused = $(':focus');
+//   var $sum = $('#ValidationSummaryEntityFormView');
+//   var $ul  = $sum.find('> ul');
+
+//   // Always clear current list
+//   $ul.empty();
+
+//   if (items.length === 0) {
+//     // No errors → hide the summary and clear heading
+//     $sum.find('> h2').text('');
+//     $sum.hide();
+//     try { focused.focus(); } catch(e) {}
+//     return;
+//   }
+
+//   // Repopulate with current errors
+//   items.forEach(function (it) {
+//     var $a = $('<a/>', {
+//       href: '#' + it.id + '_label',
+//       onclick: 'javascript:scrollToAndFocus("' + it.id + '_label","' + it.id + '"); return false;',
+//       text: it.msg
+//     });
+//     $ul.append($('<li/>').append($a));
+//   });
+
+//   var n = items.length;
+//   $sum.find('> h2').text(
+//     currentLang === 'en'
+//       ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+//       : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
+//   );
+
+//   $sum.find('a').css('text-decoration', 'underline');
+//   $sum.blur().show();
+//   try { focused.focus(); } catch(e) {}
+// }, 250);
+
+//   }
+
+//   return true;
+
 function globalEvaluationFunction() {
   // 1) Clear older inline messages
   for (var i = 0; i < Page_Validators.length; i++) {
     var v0 = Page_Validators[i];
     var id0 = String(v0.controltovalidate || '');
-    $('#'+id0+'_label > span[id='+id0+'_err]').remove();
-    $('#'+id0+'_label > br').remove();
+    $('#' + id0 + '_label > span[id=' + id0 + '_err]').remove();
+    $('#' + id0 + '_label > br').remove();
   }
 
   // 2) Collect invalid validators → de-dupe by logical field
@@ -107,26 +226,28 @@ function globalEvaluationFunction() {
     var id = String(v.controltovalidate || '');
 
     // Ignore PP's hidden file validators (both ..._hidden_* and ...hidden_*)
-    if (/_hidden_(filename|filetype)$/.test(id) || /(hidden_)(filename|filetype)$/.test(id))
+    if (/_hidden_(filename|filetype|file_size)$/i.test(id) || /(hidden_)(filename|filetype|file_size)$/i.test(id)) {
       continue;
+    }
 
     // Normalize to the base (logical) field id (strip partner suffixes)
-    var base = id.replace(/(_datepicker(_description)?|_timepicker(_description)?|_name|_value|_entityname|_text|_input_file)$/,'');
+    var base = id.replace(/(_datepicker(_description)?|_timepicker(_description)?|_name|_value|_entityname|_text|_input_file)$/i, '');
     if (seen[base]) continue;   // keep ONE reason per field
     seen[base] = true;
 
     var link = $(v.errormessage);
     var text = link.text();
-    var msg  = (currentLang === 'en'
-      ? 'Error '  + (items.length+1) + ': ' + text
-      : 'Erreur ' + (items.length+1) + ' : ' + text);
+    var msg = (currentLang === 'en'
+      ? 'Error ' + (items.length + 1) + ': ' + text
+      : 'Erreur ' + (items.length + 1) + ' : ' + text);
 
-   var inferredType = v.type || (
-  document.getElementById(base + '_datepicker_description') || document.getElementById(base + '_datepicker') ? 'date' :
-  document.getElementById(base + '_timepicker_description') || document.getElementById(base + '_timepicker') ? 'time' :
-  ($('#' + base).is('select') ? 'lookup' : '')
-);
-items.push({ id: base, type: inferredType, msg: msg });
+    var inferredType = v.type || (
+      (document.getElementById(base + '_datepicker_description') || document.getElementById(base + '_datepicker')) ? 'date' :
+      (document.getElementById(base + '_timepicker_description') || document.getElementById(base + '_timepicker')) ? 'time' :
+      ($('#' + base).is('select') ? 'lookup' : '')
+    );
+
+    items.push({ id: base, type: inferredType, msg: msg });
   }
 
   // 3) Repaint inline (single message per field)
@@ -135,38 +256,46 @@ items.push({ id: base, type: inferredType, msg: msg });
   }
 
   // 4) Rebuild the summary list to exactly match the de-duped items
-  if (items.length > 0) {
-    setTimeout(function () {
-      var focused = $(':focus');
-      var $sum = $('#ValidationSummaryEntityFormView');
-      var $ul  = $sum.find('> ul');
+  setTimeout(function () {
+    var focused = $(':focus');
+    var $sum = $('#ValidationSummaryEntityFormView');
+    var $ul = $sum.find('> ul');
 
-      $ul.empty();
-      items.forEach(function (it) {
-        var $a = $('<a/>', {
-          href: '#' + it.id + '_label',
-          onclick: 'javascript:scrollToAndFocus("' + it.id + '_label","' + it.id + '"); return false;',
-          text: it.msg
-        });
-        $ul.append($('<li/>').append($a));
+    // Always clear current list
+    $ul.empty();
+
+    if (items.length === 0) {
+      // No errors → hide the summary and clear heading
+      $sum.find('> h2').text('');
+      $sum.hide();
+      try { focused.focus(); } catch (e) {}
+      return;
+    }
+
+    // Repopulate with current errors
+    items.forEach(function (it) {
+      var $a = $('<a/>', {
+        href: '#' + it.id + '_label',
+        onclick: 'javascript:scrollToAndFocus("' + it.id + '_label","' + it.id + '"); return false;',
+        text: it.msg
       });
+      $ul.append($('<li/>').append($a));
+    });
 
-      var n = items.length;
-      $sum.find('> h2').text(
-        currentLang === 'en'
-          ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-          : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-      );
+    var n = items.length;
+    $sum.find('> h2').text(
+      currentLang === 'en'
+        ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+        : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
+    );
 
-      $sum.find('a').css('text-decoration', 'underline');
-      $sum.blur().show();
-      focused.focus();
-    }, 250);
-  }
+    $sum.find('a').css('text-decoration', 'underline');
+    $sum.blur().show();
+    try { focused.focus(); } catch (e) {}
+  }, 250);
 
   return true;
 }
-
 
 function createGlobalValidator() {
     // add custom validator to get all errors
