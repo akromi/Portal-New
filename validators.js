@@ -93,6 +93,32 @@ function validatePhoneNumberFormat(source) {
     return phoneNumberRegex.test(phoneNumber);
 }
 
+/**
+ * Validates a phone number has a minimum number of digits.
+ * This validator should be used alongside validatePhoneNumberFormat.
+ * It enforces minimum digits only (typically at submit time), while
+ * validatePhoneNumberFormat allows partial input during typing.
+ * 
+ * @param {object} source - Validator source object
+ * @param {number} minDigits - Minimum number of digits required (default: 10)
+ * @returns {boolean} - True if field is empty OR has >= minDigits, false otherwise
+ */
+function validatePhoneMinDigits(source, minDigits) {
+    var min = (typeof minDigits === "number" && minDigits > 0) ? minDigits : 10;
+    var phoneNumber = $("#" + source.controltovalidate).val();
+    
+    if (phoneNumber === null || phoneNumber.length === 0) {
+        return true; // let "required" handle empty fields
+    }
+    
+    phoneNumber = phoneNumber.trim();
+    const digitsOnly = phoneNumber.replace(/\D/g, "");
+    
+    // Fail if fewer than minimum digits
+    return digitsOnly.length >= min;
+}
+
+
 // Validates a date - returns true if valid, false otherwise
 // function validateDateFormat(source) {
 //     var raw =  $('#' + source.controltovalidate).val();
