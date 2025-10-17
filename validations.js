@@ -1558,8 +1558,8 @@ function _ppMarkRequired(baseId, hasValue, opts) {
 
 // ---- Join a date-only + time-only into a hidden portal field ----------------
 function wirePortalComposite(opts) {
-  var dateId  = opts.dateId;   // e.g., 'ethi_nextcanadadateonly'
-  var timeId  = opts.timeId;   // e.g., 'ethi_nextcanadatimeonly'
+  var dateId  = opts.dateId;   // e.g., 'ethi_nextcanadadate'
+  var timeId  = opts.timeId;   // e.g., 'ethi_nextcanadatime'
   var portalId= opts.portalId; // e.g., 'ethi_nextcanadadateandtimeportal'
 
   var $date = $('#' + dateId + '_datepicker_description');
