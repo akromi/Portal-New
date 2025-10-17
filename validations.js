@@ -257,7 +257,6 @@ function globalEvaluationFunction() {
 
   // 4) Rebuild the summary list to exactly match the de-duped items
   setTimeout(function () {
-    var focused = $(':focus');
     var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
@@ -268,7 +267,6 @@ function globalEvaluationFunction() {
       // No errors → hide the summary and clear heading
       $sum.find('> h2').text('');
       $sum.hide();
-      try { focused.focus(); } catch (e) {}
       return;
     }
 
@@ -290,8 +288,22 @@ function globalEvaluationFunction() {
     );
 
     $sum.find('a').css('text-decoration', 'underline');
-    $sum.blur().show();
-    try { focused.focus(); } catch (e) {}
+    $sum.show();
+    
+    // Focus the summary exactly once per submit attempt (not on every change event)
+    // Only focus if this is a fresh submit attempt (not already focused)
+    if (!globalEvaluationFunction._summaryFocused) {
+      globalEvaluationFunction._summaryFocused = true;
+      setTimeout(function() {
+        try {
+          $sum.blur().focus();
+          // Reset flag after a short delay so subsequent submits can focus again
+          setTimeout(function() {
+            globalEvaluationFunction._summaryFocused = false;
+          }, 100);
+        } catch(e) {}
+      }, 50);
+    }
   }, 250);
 
   return true;
@@ -319,6 +331,55 @@ function createGlobalValidator() {
 // Utility functions used internally by the library
 //
 
+// ARIA describedby helpers (public, idempotent)
+/**
+ * Ensures that the given id is included in the element's aria-describedby attribute.
+ * Safe for both jQuery objects and native DOM elements. De-dupes space-separated list.
+ * @param {jQuery|HTMLElement} elOr$El - The element (jQuery or native)
+ * @param {string} idToAdd - The ID to add to aria-describedby
+ */
+function addIdToDescribedby(elOr$El, idToAdd) {
+  if (!elOr$El || !idToAdd) return;
+  
+  var $el = elOr$El.jquery ? elOr$El : $(elOr$El);
+  if (!$el.length) return;
+  
+  var current = String($el.attr('aria-describedby') || '').trim();
+  var ids = current ? current.split(/\s+/) : [];
+  
+  // De-dupe: only add if not already present
+  if (ids.indexOf(idToAdd) === -1) {
+    ids.push(idToAdd);
+    $el.attr('aria-describedby', ids.join(' '));
+  }
+}
+
+/**
+ * Removes the given id from the element's aria-describedby attribute.
+ * Cleans up extra spaces; removes the attribute entirely if empty.
+ * @param {jQuery|HTMLElement} elOr$El - The element (jQuery or native)
+ * @param {string} idToRemove - The ID to remove from aria-describedby
+ */
+function removeIdFromDescribedby(elOr$El, idToRemove) {
+  if (!elOr$El || !idToRemove) return;
+  
+  var $el = elOr$El.jquery ? elOr$El : $(elOr$El);
+  if (!$el.length) return;
+  
+  var current = String($el.attr('aria-describedby') || '').trim();
+  if (!current) return;
+  
+  var ids = current.split(/\s+/).filter(function(id) {
+    return id !== idToRemove;
+  });
+  
+  if (ids.length === 0) {
+    $el.removeAttr('aria-describedby');
+  } else {
+    $el.attr('aria-describedby', ids.join(' '));
+  }
+}
+
 // Updates the label's error messages as per WET accessibility requirements
 // PRIVATE
 function updateLabelErrorMessage(id, type, message) {
@@ -327,6 +388,9 @@ function updateLabelErrorMessage(id, type, message) {
 
   // Keep red frame + a11y state while invalid
   $field.addClass('error').attr('aria-invalid', 'true');
+  
+  // Add error ID to aria-describedby for accessibility
+  addIdToDescribedby($field, id + '_err');
 
   // Get ALL spans with exact id (jQuery $('#id') returns only the first if duplicates exist)
   let $errs = $label.find("span[id='" + id + "_err']");
@@ -369,6 +433,9 @@ function clearFieldErrorUI(id, type) {
 
   $field.removeClass('error')
         .attr('aria-invalid', 'false');  // a11y state
+  
+  // Remove error ID from aria-describedby for accessibility
+  removeIdFromDescribedby($field, id + '_err');
 
   // Remove inline error + any preceding <br>
   const $err = $label.find('#' + id + '_err');
@@ -432,6 +499,38 @@ function getFocusableField(id, type) {
 }
 
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+/**
+ * Hides fields by applying aria-hidden="true" and display:none.
+ * Useful for backing/system fields that should not be visible to users or AT.
+ * @param {string[]} ids - Array of element IDs to hide
+ */
+function hideFields(ids) {
+  if (!Array.isArray(ids)) ids = [ids];
+  ids.forEach(function(id) {
+    var $el = $('#' + id);
+    if ($el.length) {
+      $el.attr('aria-hidden', 'true')
+         .css('display', 'none');
+    }
+  });
+}
+
+/**
+ * Adds numeric affordance to inputs (inputmode="numeric" and pattern for digits).
+ * Helps mobile users get numeric keyboards.
+ * @param {string[]} ids - Array of input element IDs
+ */
+function addNumericAffordance(ids) {
+  if (!Array.isArray(ids)) ids = [ids];
+  ids.forEach(function(id) {
+    var $el = $('#' + id);
+    if ($el.length && $el.is('input')) {
+      $el.attr('inputmode', 'numeric')
+         .attr('pattern', '[0-9]*');
+    }
+  });
+}
 
 // Accepts 'YYYY-MM-DD' and 'HH:mm' (24h). Returns 'YYYY-MM-DD' or 'YYYY-MM-DD HH:mm'
 function getCompositeDateTimeValue(baseId) {

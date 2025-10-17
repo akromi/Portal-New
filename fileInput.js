@@ -406,6 +406,28 @@ function fileI18n() {
           $chooseBtn.attr('aria-label', desiredChoose);
           logger.debug('block[%d]: chooseBtn aria-label: %o -> %o', idx, prevChooseAria, desiredChoose);
         }
+        
+        // Ensure the Choose/Change button is type="button" (idempotent) to avoid form submits
+        if ($chooseBtn.attr('type') !== 'button') {
+          $chooseBtn.attr('type', 'button');
+          logger.debug('block[%d]: chooseBtn type -> button', idx);
+        }
+        
+        // Ensure there's a live region for accessibility announcements
+        const baseId = $input.attr('id') ? $input.attr('id').replace(/_input_file$/, '') : '';
+        let $liveRegion = baseId ? $('#' + baseId + '_live') : $();
+        if (baseId && !$liveRegion.length) {
+          const container = $block.closest('.cell, td, .form-group').get(0) || $block.parent().get(0);
+          if (container) {
+            $liveRegion = $('<div></div>')
+              .attr('id', baseId + '_live')
+              .attr('aria-live', 'polite')
+              .attr('aria-atomic', 'true')
+              .addClass('wb-inv') // visually hidden
+              .appendTo(container);
+            logger.debug('block[%d]: created live region', idx);
+          }
+        }
 
         // Delete button label + visibility
         if ($delBtn.length) {
@@ -441,6 +463,17 @@ function fileI18n() {
             logger.debug('block[%d]: filename set: hidden=%o->%o, visible=%o->%o',
               idx, prevHidden, file.name, prevText, file.name);
 
+            // Announce filename selection via live region
+            const baseId = $input.attr('id') ? $input.attr('id').replace(/_input_file$/, '') : '';
+            const $live = baseId ? $('#' + baseId + '_live') : $();
+            if ($live.length) {
+              const announcement = (TT === _i18n() && typeof fileI18n === 'function')
+                ? (currentLang === 'en' ? 'File selected: ' + file.name : 'Fichier sélectionné : ' + file.name)
+                : 'File selected: ' + file.name;
+              $live.text(announcement);
+              logger.debug('block[%d]: announced file selection', idx);
+            }
+
             // Flip to "Change file" + ensure Delete visible
             if ($chooseBtn.text().trim() !== TT.change) {
               $chooseBtn.text(TT.change);
@@ -471,6 +504,16 @@ function fileI18n() {
             if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
             if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
             if ($delBtn.length) $delBtn.hide();
+            
+            // Announce file cleared via live region
+            const baseId = $input.attr('id') ? $input.attr('id').replace(/_input_file$/, '') : '';
+            const $live = baseId ? $('#' + baseId + '_live') : $();
+            if ($live.length) {
+              const announcement = (currentLang === 'en') ? 'Selection cleared' : 'Sélection effacée';
+              $live.text(announcement);
+              logger.debug('block[%d]: announced selection cleared', idx);
+            }
+            
             logger.info('block[%d]: cleared selection -> reset to NONE', idx);
           }
 
@@ -490,6 +533,15 @@ function fileI18n() {
             if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
             if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
             $delBtn.hide();
+            
+            // Announce deletion via live region
+            const baseId = $input.attr('id') ? $input.attr('id').replace(/_input_file$/, '') : '';
+            const $live = baseId ? $('#' + baseId + '_live') : $();
+            if ($live.length) {
+              const announcement = (currentLang === 'en') ? 'Selection cleared' : 'Sélection effacée';
+              $live.text(announcement);
+              logger.debug('block[%d]: announced deletion', idx);
+            }
 
             logger.trace('block[%d]: delete handler duration=%dms', idx, Math.round(performance.now() - h0));
           });
