@@ -72,35 +72,37 @@ function sanitizeFileButtons() {
 
 
 
-// 
+
 /* ============================================================
-   File field stock cleanup (verbose)
+   File field stock cleanup (ALL stock file errors suppressed)
    - Disables PP Required validator on hidden filename partners
-   - Hides the static ".error_message" block that says:
-       "This file is empty, please upload a valid file."
-   - Leaves YOUR custom validators fully in charge
+   - Hides ALL inline ".error_message" blocks in the file cell
+   - Hides stock <span id="<base>_err"> if present
+   - Re-hides on change, partial postbacks, and DOM mutations
+  - Leaves YOUR custom validators fully in charge
    ============================================================ */
 
 (function () {
-  const LOG = (...a) => console.log('[file-clean]', ...a);
+  const LOG  = (...a)=>console.log('[file-clean]', ...a);
+  const DBG  = (...a)=>console.log('%c[file-clean:dbg]','color:#888', ...a);
 
   // Disable/hide built-in Required validator for a given base id
-  function disableRequiredHidden(baseId) {
+  function disableRequiredHidden(baseId){
     const ids = [
       'RequiredFieldValidator' + baseId + 'hidden_filename',
       'RequiredFieldValidator' + baseId + '_hidden_filename'
     ];
     let touched = 0;
 
-    (window.Page_Validators || []).forEach(v => {
+    (window.Page_Validators||[]).forEach(v=>{
       if (!v) return;
-      if (ids.includes(String(v.id)) || ids.includes('' + v.id)) {
+      if (ids.includes(String(v.id))) {
         // stop it from failing + displaying
         v.enabled = false;
         v.isvalid = true;
-        v.evaluationfunction = function () { return true; };
+        v.evaluationfunction = function(){ return true; };
         if (typeof window.ValidatorUpdateDisplay === 'function') {
-          try { window.ValidatorUpdateDisplay(v); } catch (e) { }
+          try { window.ValidatorUpdateDisplay(v); } catch(e){}
         }
         touched++;
         LOG('Disabled PP RequiredFieldValidator:', v.id, 'target=', v.controltovalidate);
@@ -110,117 +112,102 @@ function sanitizeFileButtons() {
       }
     });
 
-    // Fallback: remove DOM span directly if not seen in Page_Validators yet
-    ids.forEach(id => {
+    // Fallback: hide DOM span directly if not reflected in Page_Validators yet
+    ids.forEach(id=>{
       const el = document.getElementById(id);
-      if (el) { el.style.display = 'none'; touched++; LOG('Hid DOM validator span:', id); }
+      if (el) { el.style.display = 'none'; touched++; DBG('Hid DOM validator span:', id); }
     });
 
-    if (!touched) LOG('No Required validator found for', baseId, '(ok if PP didn’t render it here)');
+    if (!touched) DBG('No Required validator found for', baseId, '(ok if PP didn’t render it here)');
   }
 
-  // Hide the static inline zero-byte message block living in the cell
-  function hideInlineZeroByteBlock(baseId) {
+  // Find the TD/cell that houses the control + message
+  function findCell(baseId){
     const label = document.getElementById(baseId + '_label');
-    if (!label) return;
-
-    // climb to the TD/cell that houses the control + message
-    const cell = label.closest('.clearfix.cell, td.cell, .form-control-cell, td, .cell');
-    if (!cell) return;
-
-    // look for the exact message container
-    const msg = cell.querySelector('.error_message');
-    if (msg) {
-      const txt = (msg.textContent || '').trim();
-      if (/this file is empty/i.test(txt)) {
-        msg.style.display = 'none';
-        msg.setAttribute('data-zero-byte-suppressed', '1');
-        LOG('Hid inline zero-byte block for', baseId, '->', txt);
-      } else {
-        // if you only want to hide file-specific block, leave others alone
-        LOG('Found .error_message but text did not match zero-byte pattern for', baseId, '->', txt);
-      }
-    } else {
-      LOG('No .error_message block found near', baseId);
-    }
+    if (!label) return null;
+    return label.closest('.clearfix.cell, td.cell, .form-control-cell, td, .cell');
   }
 
-// Mumna added this
-// function hideInlineZeroByteBlock(baseId) {
-//   const fileInput = document.querySelector(`#${baseId}_input_file`);
-//   if (!fileInput) return;
+  // Hide ALL stock inline error nodes inside the file cell
+  function hideAllInlineStockMessages(baseId){
+    const cell = findCell(baseId);
+    if (!cell) { DBG('No cell found for', baseId); return; }
 
-//   const container = fileInput.closest('td, div');
-//   if (!container) return;
+    // 1) Hide every .error_message block regardless of text
+    const blocks = cell.querySelectorAll('.error_message');
+    if (blocks.length) {
+      blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
+      LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
+    } else {
+      DBG('No .error_message blocks for', baseId);
+    }
 
-//   const msgBlocks = container.querySelectorAll('.error_message');
-//   const deleteIcons = container.querySelectorAll('.file-delete, .delete-file, .file-delete-button, [title="Supprimer"]');
+    // 2) Hide stock <span id="<base>_err"> if present
+    const stock = document.getElementById(baseId + '_err');
+    if (stock) { stock.style.display = 'none'; DBG('Hid stock inline span:', baseId + '_err'); }
+  }
 
-//   msgBlocks.forEach((el) => {
-//     const msg = el.textContent.trim();
+  // MutationObserver: keep hiding anything new that appears in the cell
+  const observers = new Map();
+  function ensureObserver(baseId){
+    const cell = findCell(baseId);
+    if (!cell || observers.has(baseId)) return;
 
-//     
-//     const isZeroByte =
-//       /empty file|no file selected|fichier vide|aucun fichier/i.test(msg);
+    const obs = new MutationObserver((mutations)=>{
+      let changed = false;
+      for (const m of mutations) {
+        if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
+          // If any new error nodes appear, squash them
+          const blocks = cell.querySelectorAll('.error_message');
+          blocks.forEach(b => {
+            if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
+          });
+          const stock = document.getElementById(baseId + '_err');
+          if (stock && stock.style.display !== 'none') { stock.style.display = 'none'; changed = true; }
+        }
+      }
+      if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
+    });
 
-//     if (isZeroByte) {
-//       // Hide the platform’s default error
-//       el.style.display = 'none';
-//     }
-//   });
+    obs.observe(cell, { childList: true, subtree: true });
+    observers.set(baseId, obs);
+    DBG('Observer attached for', baseId);
+  }
 
-//   // Hide any lingering delete icon if the uploaded file is empty
-//   deleteIcons.forEach((icon) => {
-//     icon.style.display = 'none';
-//   });
-// }
-
-
-  // Re-hide the inline block after any change on the visible file input
-  function wireChangeHide(baseId) {
+  // Re-hide the inline blocks after any change on the visible file input
+  function wireChangeHide(baseId){
     const fin = document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
-    if (!fin) { LOG('File input not found for', baseId); return; }
-    fin.addEventListener('change', function () {
-      // Your validators will run next; keep the stock block hidden
-      hideInlineZeroByteBlock(baseId);
+    if (!fin) { DBG('File input not found for', baseId); return; }
+    fin.addEventListener('change', function(){
+      hideAllInlineStockMessages(baseId);
     });
   }
-
-// Mumna added 
-// function wireChangeHide(baseId) {
-//   const fileInput = document.querySelector(`#${baseId}_input_file`);
-//   if (!fileInput) return;
-
-//   fileInput.addEventListener('change', () => {
-//     hideInlineZeroByteBlock(baseId);
-//     const custom = document.getElementById(`${baseId}_customFileError`);
-//     if (custom) custom.style.display = 'none';
-//   });
-// }
 
   // Public API
-  window.suppressStockFileErrors = function (baseIds) {
-    (baseIds || []).forEach(id => {
+  window.suppressStockFileErrors = function(baseIds){
+    (baseIds||[]).forEach(id=>{
       LOG('--- suppressStockFileErrors for', id, '---');
       disableRequiredHidden(id);
-      hideInlineZeroByteBlock(id);
+      hideAllInlineStockMessages(id);
+      ensureObserver(id);
       wireChangeHide(id);
     });
 
     // Handle partial postbacks that may re-inject validators / blocks
     if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
       try {
-        Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function () {
+        Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function(){
           LOG('Partial postback detected; re-suppressing for', baseIds);
-          (baseIds || []).forEach(id => {
+          (baseIds||[]).forEach(id=>{
             disableRequiredHidden(id);
-            hideInlineZeroByteBlock(id);
+            hideAllInlineStockMessages(id);
           });
         });
-      } catch (e) { }
+      } catch(e){ /* ignore */ }
     }
   };
 })();
+
 
 
 // Runtime i18n (reads <html lang> every time)
@@ -522,74 +509,74 @@ function fileI18n() {
 
 
 
-// fileInput.js
-(function (w, $) {
-  w.FileInputUX = w.FileInputUX || {};
+// // fileInput.js
+// (function (w, $) {
+//   w.FileInputUX = w.FileInputUX || {};
 
-  function escId(id) {
-    if (w.CSS && CSS.escape) return '#' + CSS.escape(id);
-    return '#' + String(id).replace(/([ #;?%&,.+*~':"!^$[\]()=>|\/@])/g, '\\$1');
-  }
+//   function escId(id) {
+//     if (w.CSS && CSS.escape) return '#' + CSS.escape(id);
+//     return '#' + String(id).replace(/([ #;?%&,.+*~':"!^$[\]()=>|\/@])/g, '\\$1');
+//   }
 
-  w.FileInputUX.enableFileLinkOnPick = function enableFileLinkOnPick(fieldName) {
-    const inputSel = escId(fieldName + '_input_file');
-    const nameSpanSel = escId(fieldName + '_file_name');
+//   w.FileInputUX.enableFileLinkOnPick = function enableFileLinkOnPick(fieldName) {
+//     const inputSel = escId(fieldName + '_input_file');
+//     const nameSpanSel = escId(fieldName + '_file_name');
 
-    $(document).off('change.filelink.' + fieldName, inputSel)
-      .on('change.filelink.' + fieldName, inputSel, function () {
-        const input = this;
-        const file = (input.files && input.files[0]) || null;
+//     $(document).off('change.filelink.' + fieldName, inputSel)
+//       .on('change.filelink.' + fieldName, inputSel, function () {
+//         const input = this;
+//         const file = (input.files && input.files[0]) || null;
 
-        const $block = $(input).closest('.file-control-container, .container-file-input');
-        const $nameBox = $block.find('.file-name-container').first();
+//         const $block = $(input).closest('.file-control-container, .container-file-input');
+//         const $nameBox = $block.find('.file-name-container').first();
 
-        let $a = $nameBox.find('a').first();
-        let $text = $nameBox.children('div').first();
+//         let $a = $nameBox.find('a').first();
+//         let $text = $nameBox.children('div').first();
 
-        if (!$a.length) {
-          $a = $('<a target="_blank" rel="noopener"></a>');
-          if ($text.length) { $text.before($a); $a.append($text.contents()); }
-          else { $nameBox.prepend($a); }
-        }
+//         if (!$a.length) {
+//           $a = $('<a target="_blank" rel="noopener"></a>');
+//           if ($text.length) { $text.before($a); $a.append($text.contents()); }
+//           else { $nameBox.prepend($a); }
+//         }
 
-        if (!$a.data('origHref')) $a.data('origHref', $a.attr('href') || '');
+//         if (!$a.data('origHref')) $a.data('origHref', $a.attr('href') || '');
 
-        const revoke = () => {
-          const u = $a.data('blobUrl');
-          if (u) { URL.revokeObjectURL(u); $a.removeData('blobUrl'); }
-        };
+//         const revoke = () => {
+//           const u = $a.data('blobUrl');
+//           if (u) { URL.revokeObjectURL(u); $a.removeData('blobUrl'); }
+//         };
 
-        if (!file) {
-          revoke();
-          const orig = $a.data('origHref');
-          if (orig) $a.attr('href', orig);
-          $a.hide();
-          $text.show();
-          return;
-        }
+//         if (!file) {
+//           revoke();
+//           const orig = $a.data('origHref');
+//           if (orig) $a.attr('href', orig);
+//           $a.hide();
+//           $text.show();
+//           return;
+//         }
 
-        revoke();
-        const url = URL.createObjectURL(file);
+//         revoke();
+//         const url = URL.createObjectURL(file);
 
-        $a.attr({ href: url, target: '_blank', rel: 'noopener', title: file.name })
-          .data('blobUrl', url)
-          .show();
+//         $a.attr({ href: url, target: '_blank', rel: 'noopener', title: file.name })
+//           .data('blobUrl', url)
+//           .show();
 
-        const $nameSpan = $nameBox.find(nameSpanSel);
-        if ($nameSpan.length) $nameSpan.text(file.name); else $a.text(file.name);
+//         const $nameSpan = $nameBox.find(nameSpanSel);
+//         if ($nameSpan.length) $nameSpan.text(file.name); else $a.text(file.name);
 
-        $text.hide();
-      });
-  };
+//         $text.hide();
+//       });
+//   };
 
-  // Optional: clean up blob URLs on page unload
-  w.addEventListener('beforeunload', () => {
-    $('.file-name-container a').each(function () {
-      const u = $(this).data('blobUrl'); if (u) URL.revokeObjectURL(u);
-    });
-  }, { once: true });
+//   // Optional: clean up blob URLs on page unload
+//   w.addEventListener('beforeunload', () => {
+//     $('.file-name-container a').each(function () {
+//       const u = $(this).data('blobUrl'); if (u) URL.revokeObjectURL(u);
+//     });
+//   }, { once: true });
 
-})(window, jQuery);
+// })(window, jQuery);
 
 
 
@@ -1022,301 +1009,14 @@ function validateLoginSession(data, textStatus, jqXHR, onSuccess) {
   };
 })();
 
-/* ============================================================
-   PortalDateTimeUX - Native date/time input UX enhancements
-   - Remove WebKit ghost text when empty
-   - Allow keyboard typing with smart normalization
-   - Locale-aware (EN 12h AM/PM, FR 24h)
-   - Keep native pickers functional
-   ============================================================ */
-(function (window, $) {
-  'use strict';
 
-  if (!$ || !$.fn) {
-    console.warn('[PortalDateTimeUX] jQuery not available; skipping init');
-    return;
+jQuery(function ($) {
+  // Disable native HTML5 tooltips (“Please fill out this field.”)
+  var $form = $('#liquid_form');
+  if ($form.length) {
+    $form.attr('novalidate', 'novalidate');
+    console.debug('[WET] novalidate applied to #liquid_form');
   }
+});
 
-  const LOG = {
-    info: (...a) => console.log('[DateTimeUX]', ...a),
-    warn: (...a) => console.warn('[DateTimeUX]', ...a),
-    err: (...a) => console.error('[DateTimeUX]', ...a)
-  };
 
-  /**
-   * Detect locale from html lang or data-lang attribute
-   * @param {HTMLElement} [root=document.documentElement] - root element to check
-   * @returns {string} 'en' | 'fr'
-   */
-  function detectLocale(root) {
-    const el = root || document.documentElement;
-    const lang = (el.getAttribute('lang') || el.getAttribute('data-lang') || 'en').toLowerCase();
-    return lang.startsWith('fr') ? 'fr' : 'en';
-  }
-
-  /**
-   * Normalize date text to YYYY-MM-DD
-   * Accepts: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD, YYYYMMDD
-   * @param {string} raw - raw user input
-   * @returns {string} normalized YYYY-MM-DD or empty string if invalid
-   */
-  function normalizeDateText(raw) {
-    if (!raw || typeof raw !== 'string') return '';
-    
-    let cleaned = raw.trim();
-    if (!cleaned) return '';
-
-    // Already in correct format?
-    if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
-      // Validate it's a real date
-      const [y, m, d] = cleaned.split('-').map(Number);
-      const dt = new Date(Date.UTC(y, m - 1, d));
-      if (dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d) {
-        return cleaned;
-      }
-      return '';
-    }
-
-    // Replace / or . with -
-    cleaned = cleaned.replace(/[/.]/g, '-');
-
-    // Check if it's compact format YYYYMMDD (8 digits)
-    if (/^\d{8}$/.test(cleaned)) {
-      const y = parseInt(cleaned.substring(0, 4), 10);
-      const m = parseInt(cleaned.substring(4, 6), 10);
-      const d = parseInt(cleaned.substring(6, 8), 10);
-      const dt = new Date(Date.UTC(y, m - 1, d));
-      if (dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d) {
-        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      }
-      return '';
-    }
-
-    // Try parsing YYYY-MM-DD after replacement
-    const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(cleaned);
-    if (match) {
-      const y = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
-      const d = parseInt(match[3], 10);
-      const dt = new Date(Date.UTC(y, m - 1, d));
-      if (dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d) {
-        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      }
-    }
-
-    return '';
-  }
-
-  /**
-   * Normalize time text to HH:mm
-   * EN: accepts h[:mm] AM/PM (case-insensitive) → 24h
-   * FR: accepts HH:mm or H or Hmm → HH:mm
-   * @param {string} raw - raw user input
-   * @param {string} locale - 'en' | 'fr'
-   * @returns {string} normalized HH:mm or empty string if invalid
-   */
-  function normalizeTimeText(raw, locale) {
-    if (!raw || typeof raw !== 'string') return '';
-    
-    let cleaned = raw.trim();
-    if (!cleaned) return '';
-
-    // Already in correct HH:mm format?
-    if (/^([01]?\d|2[0-3]):([0-5]\d)$/.test(cleaned)) {
-      const [h, m] = cleaned.split(':').map(Number);
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-
-    const isEn = (locale || 'en').toLowerCase() === 'en' || locale === 'fr' ? false : true;
-
-    // Try parsing with AM/PM (EN style, but also accept in FR)
-    const ampmMatch = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i.exec(cleaned);
-    if (ampmMatch) {
-      let h = parseInt(ampmMatch[1], 10);
-      const m = parseInt(ampmMatch[2] || '0', 10);
-      const period = ampmMatch[3].toLowerCase();
-
-      if (h < 1 || h > 12 || m < 0 || m > 59) return '';
-
-      // Convert to 24h
-      if (period === 'am') {
-        if (h === 12) h = 0; // 12 AM = 00:xx
-      } else {
-        if (h !== 12) h += 12; // PM: add 12 except for 12 PM
-      }
-
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-
-    // Try parsing 24h format variations
-    // H or HH (no minutes)
-    if (/^\d{1,2}$/.test(cleaned)) {
-      const h = parseInt(cleaned, 10);
-      if (h >= 0 && h <= 23) {
-        return `${String(h).padStart(2, '0')}:00`;
-      }
-      return '';
-    }
-
-    // Hmm or HHmm (compact)
-    if (/^\d{3,4}$/.test(cleaned)) {
-      let h, m;
-      if (cleaned.length === 3) {
-        h = parseInt(cleaned.substring(0, 1), 10);
-        m = parseInt(cleaned.substring(1, 3), 10);
-      } else {
-        h = parseInt(cleaned.substring(0, 2), 10);
-        m = parseInt(cleaned.substring(2, 4), 10);
-      }
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      }
-      return '';
-    }
-
-    // H:mm or HH:mm (with potential single-digit hour)
-    const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(cleaned);
-    if (timeMatch) {
-      const h = parseInt(timeMatch[1], 10);
-      const m = parseInt(timeMatch[2], 10);
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      }
-    }
-
-    return '';
-  }
-
-  /**
-   * Update has-value class based on input value
-   */
-  function updateValueClass($input) {
-    const hasVal = !!($input.val() || '').trim();
-    $input.toggleClass('has-value', hasVal);
-  }
-
-  /**
-   * Initialize date fields
-   * @param {string|jQuery} selectorOr$els - selector or jQuery object
-   * @param {Object} [opts] - options (reserved for future)
-   */
-  function initDateFields(selectorOr$els, opts) {
-    const $fields = (selectorOr$els && selectorOr$els.jquery) ? selectorOr$els : $(selectorOr$els);
-    if (!$fields.length) {
-      LOG.warn('initDateFields: no fields found', selectorOr$els);
-      return;
-    }
-
-    const locale = detectLocale();
-    const lang = locale === 'fr' ? 'fr-CA' : 'en-CA';
-
-    $fields.each(function () {
-      const $el = $(this);
-      
-      // Skip if already initialized
-      if ($el.data('portalDateTimeUX')) return;
-      $el.data('portalDateTimeUX', true);
-
-      // Ensure it's type=date
-      if ($el.attr('type') !== 'date') {
-        LOG.warn('initDateFields: field is not type=date', this.id);
-        return;
-      }
-
-      // Set attributes
-      $el.attr('lang', lang);
-      $el.attr('inputmode', 'numeric');
-      $el.addClass('no-ghost');
-
-      // Update has-value class on load
-      updateValueClass($el);
-
-      // Bind events
-      $el.off('.portalDateTimeUX').on('blur.portalDateTimeUX', function () {
-        const raw = $el.val();
-        const normalized = normalizeDateText(raw);
-        
-        if (raw && normalized && raw !== normalized) {
-          $el.val(normalized);
-          // Trigger change to notify validators
-          $el.trigger('change');
-          LOG.info('Date normalized:', raw, '→', normalized);
-        }
-        
-        updateValueClass($el);
-      }).on('input.portalDateTimeUX change.portalDateTimeUX', function () {
-        updateValueClass($el);
-      });
-
-      LOG.info('initDateFields: initialized', this.id, 'lang=' + lang);
-    });
-  }
-
-  /**
-   * Initialize time fields
-   * @param {string|jQuery} selectorOr$els - selector or jQuery object
-   * @param {Object} [opts] - options (reserved for future)
-   */
-  function initTimeFields(selectorOr$els, opts) {
-    const $fields = (selectorOr$els && selectorOr$els.jquery) ? selectorOr$els : $(selectorOr$els);
-    if (!$fields.length) {
-      LOG.warn('initTimeFields: no fields found', selectorOr$els);
-      return;
-    }
-
-    const locale = detectLocale();
-
-    $fields.each(function () {
-      const $el = $(this);
-      
-      // Skip if already initialized
-      if ($el.data('portalDateTimeUX')) return;
-      $el.data('portalDateTimeUX', true);
-
-      // Ensure it's type=time
-      if ($el.attr('type') !== 'time') {
-        LOG.warn('initTimeFields: field is not type=time', this.id);
-        return;
-      }
-
-      // Set attributes
-      $el.attr('step', '60'); // minutes granularity
-      $el.attr('inputmode', 'numeric');
-      $el.addClass('no-ghost');
-
-      // Update has-value class on load
-      updateValueClass($el);
-
-      // Bind events
-      $el.off('.portalDateTimeUX').on('blur.portalDateTimeUX', function () {
-        const raw = $el.val();
-        const normalized = normalizeTimeText(raw, locale);
-        
-        if (raw && normalized && raw !== normalized) {
-          $el.val(normalized);
-          // Trigger change to notify validators
-          $el.trigger('change');
-          LOG.info('Time normalized:', raw, '→', normalized, 'locale=' + locale);
-        }
-        
-        updateValueClass($el);
-      }).on('input.portalDateTimeUX change.portalDateTimeUX', function () {
-        updateValueClass($el);
-      });
-
-      LOG.info('initTimeFields: initialized', this.id, 'locale=' + locale);
-    });
-  }
-
-  // Export to window
-  window.PortalDateTimeUX = {
-    detectLocale: detectLocale,
-    normalizeDateText: normalizeDateText,
-    normalizeTimeText: normalizeTimeText,
-    initDateFields: initDateFields,
-    initTimeFields: initTimeFields
-  };
-
-  LOG.info('PortalDateTimeUX library loaded');
-
-})(window, window.jQuery);
