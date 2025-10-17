@@ -128,51 +128,111 @@ function sanitizeFileButtons() {
     return label.closest('.clearfix.cell, td.cell, .form-control-cell, td, .cell');
   }
 
-  // Hide ALL stock inline error nodes inside the file cell
-  function hideAllInlineStockMessages(baseId){
-    const cell = findCell(baseId);
-    if (!cell) { DBG('No cell found for', baseId); return; }
+  // // Hide ALL stock inline error nodes inside the file cell
+  // function hideAllInlineStockMessages(baseId){
+  //   const cell = findCell(baseId);
+  //   if (!cell) { DBG('No cell found for', baseId); return; }
 
-    // 1) Hide every .error_message block regardless of text
-    const blocks = cell.querySelectorAll('.error_message');
-    if (blocks.length) {
-      blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
-      LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
-    } else {
-      DBG('No .error_message blocks for', baseId);
-    }
+  //   // 1) Hide every .error_message block regardless of text
+  //   const blocks = cell.querySelectorAll('.error_message');
+  //   if (blocks.length) {
+  //     blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
+  //     LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
+  //   } else {
+  //     DBG('No .error_message blocks for', baseId);
+  //   }
 
-    // 2) Hide stock <span id="<base>_err"> if present
-    const stock = document.getElementById(baseId + '_err');
-    if (stock) { stock.style.display = 'none'; DBG('Hid stock inline span:', baseId + '_err'); }
+  //   // 2) Hide stock <span id="<base>_err"> if present
+  //   const stock = document.getElementById(baseId + '_err');
+  //   if (stock) { stock.style.display = 'none'; DBG('Hid stock inline span:', baseId + '_err'); }
+  // }
+
+  // // MutationObserver: keep hiding anything new that appears in the cell
+  // const observers = new Map();
+  // function ensureObserver(baseId){
+  //   const cell = findCell(baseId);
+  //   if (!cell || observers.has(baseId)) return;
+
+  //   const obs = new MutationObserver((mutations)=>{
+  //     let changed = false;
+  //     for (const m of mutations) {
+  //       if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
+  //         // If any new error nodes appear, squash them
+  //         const blocks = cell.querySelectorAll('.error_message');
+  //         blocks.forEach(b => {
+  //           if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
+  //         });
+  //         const stock = document.getElementById(baseId + '_err');
+  //         if (stock && stock.style.display !== 'none') { stock.style.display = 'none'; changed = true; }
+  //       }
+  //     }
+  //     if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
+  //   });
+
+  //   obs.observe(cell, { childList: true, subtree: true });
+  //   observers.set(baseId, obs);
+  //   DBG('Observer attached for', baseId);
+  // }
+
+ 
+
+// Hide ALL stock inline error nodes inside the file cell
+function hideAllInlineStockMessages(baseId){
+  const cell = findCell(baseId);
+  if (!cell) { DBG('No cell found for', baseId); return; }
+
+  // 1) Hide every .error_message block regardless of text
+  const blocks = cell.querySelectorAll('.error_message');
+  if (blocks.length) {
+    blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
+    LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
+  } else {
+    DBG('No .error_message blocks for', baseId);
   }
 
-  // MutationObserver: keep hiding anything new that appears in the cell
-  const observers = new Map();
-  function ensureObserver(baseId){
-    const cell = findCell(baseId);
-    if (!cell || observers.has(baseId)) return;
+  // 2) Hide stock <span id="<base>_err"> ONLY if it is NOT under the label
+  const label = document.getElementById(baseId + '_label');
+  const stock = document.getElementById(baseId + '_err');
+  const isUnderLabel = !!(label && stock && label.contains(stock));
+  if (stock && !isUnderLabel) {
+    stock.style.display = 'none';
+    DBG('Hid stock inline span outside label:', baseId + '_err');
+  }
+}
 
-    const obs = new MutationObserver((mutations)=>{
-      let changed = false;
-      for (const m of mutations) {
-        if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
-          // If any new error nodes appear, squash them
-          const blocks = cell.querySelectorAll('.error_message');
-          blocks.forEach(b => {
-            if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
-          });
-          const stock = document.getElementById(baseId + '_err');
-          if (stock && stock.style.display !== 'none') { stock.style.display = 'none'; changed = true; }
+// MutationObserver: keep hiding anything new that appears in the cell
+const observers = new Map();
+function ensureObserver(baseId){
+  const cell = findCell(baseId);
+  if (!cell || observers.has(baseId)) return;
+
+  const obs = new MutationObserver((mutations)=>{
+    let changed = false;
+    for (const m of mutations) {
+      if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
+        // If any new error nodes appear, squash them
+        const blocks = cell.querySelectorAll('.error_message');
+        blocks.forEach(b => {
+          if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
+        });
+
+        // Only hide <base>_err if it's not under the label (our custom inline lives under the label)
+        const label = document.getElementById(baseId + '_label');
+        const stock = document.getElementById(baseId + '_err');
+        const isUnderLabel = !!(label && stock && label.contains(stock));
+        if (stock && !isUnderLabel && stock.style.display !== 'none') {
+          stock.style.display = 'none';
+          changed = true;
         }
       }
-      if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
-    });
+    }
+    if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
+  });
 
-    obs.observe(cell, { childList: true, subtree: true });
-    observers.set(baseId, obs);
-    DBG('Observer attached for', baseId);
-  }
+  obs.observe(cell, { childList: true, subtree: true });
+  observers.set(baseId, obs);
+  DBG('Observer attached for', baseId);
+}
 
   // Re-hide the inline blocks after any change on the visible file input
   function wireChangeHide(baseId){
