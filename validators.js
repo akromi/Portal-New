@@ -295,13 +295,14 @@ function validatePositiveNumberOnly(source) {
 
 // Validates if a file is selected - returns true if valid, false otherwise
 function validateFileSelected(source) {
-  const $inp = $("#" + source.controltovalidate + "_input_file");
-  // Works for native file inputs and PP’s value fallback
-  const hasFiles = $inp[0] && $inp[0].files && $inp[0].files.length >= 0;
-  const hasValue = !!$inp.val();
-  return hasFiles || hasValue;
+  var fin = _fileInputFor(source);
+  if (!fin) return false; // fail-closed for required
+  if (fin.files && typeof fin.files.length === 'number') {
+    return fin.files.length > 0;
+  }
+  var val = String(fin.value || '').trim();
+  return val.length > 0;
 }
-
 // Small shared helper — same targeting pattern you use elsewhere
 function _fileInputFor(src){
   var baseId = src && src.controltovalidate ? src.controltovalidate : '';
