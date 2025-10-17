@@ -297,107 +297,57 @@ function validatePositiveNumberOnly(source) {
 function validateFileSelected(source) {
   const $inp = $("#" + source.controltovalidate + "_input_file");
   // Works for native file inputs and PP’s value fallback
-  const hasFiles = $inp[0] && $inp[0].files && $inp[0].files.length > 0;
+  const hasFiles = $inp[0] && $inp[0].files && $inp[0].files.length >= 0;
   const hasValue = !!$inp.val();
   return hasFiles || hasValue;
 }
 
-// Max file size (4 MB) + zero-byte check (single file)
-function validateFileSize(source) {
-  const maxBytes = 4 * 1024 * 1024;
-  const baseId = getFileBaseId(source);
-
-  let el = document.getElementById(baseId + '_input_file');
-  if (!el) el = document.getElementById(source.controltovalidate);
-
-  const hasFiles = !!(el && el.files && el.files.length);
-  toggleRequiredForFile(baseId, hasFiles);
-  if (!hasFiles) return true; // let RequiredFieldValidator handle empty
-
-  const file = el.files[0];
-  if (!file) return true;
-
-  // Get language from html element
-  const lang = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
-  const isFr = lang.startsWith('fr');
-
-  if (file.size === 0) {
-    // WET4-style inline error message with bilingual support
-    const msg = isFr 
-      ? 'Ce fichier est vide, veuillez télécharger un fichier valide.'
-      : 'This file is empty, please upload a valid file.';
-    source.errormessage = `<a href='#${baseId}_label' onclick='javascript:scrollToAndFocus("${baseId}_label", "${baseId}"); return false;' referenceControlId=${baseId}>${msg}</a>`;
-    
-    // Force WET4-style inline error display below the label
-    setTimeout(() => {
-      const label = document.getElementById(baseId + '_label');
-      if (label) {
-        const errId = baseId + '_err';
-        let errSpan = document.getElementById(errId);
-        if (!errSpan) {
-          errSpan = document.createElement('span');
-          errSpan.id = errId;
-          errSpan.className = 'label label-danger wrapped';
-          label.appendChild(document.createElement('br'));
-          label.appendChild(errSpan);
-        }
-        errSpan.textContent = msg;
-        errSpan.style.display = '';
-      }
-      
-      // Mark input as invalid
-      if (el) {
-        el.classList.add('error');
-        el.setAttribute('aria-invalid', 'true');
-        const errId = baseId + '_err';
-        const describedBy = el.getAttribute('aria-describedby') || '';
-        if (!describedBy.includes(errId)) {
-          el.setAttribute('aria-describedby', (describedBy + ' ' + errId).trim());
-        }
-      }
-    }, 0);
-    
-    return false;
-  }
-  if (file.size > maxBytes) {
-    const msg = isFr
-      ? 'Le fichier sélectionné dépasse la limite de 4 Mo.'
-      : 'The selected file exceeds the 4 MB limit.';
-    source.errormessage = `<a href='#${baseId}_label' onclick='javascript:scrollToAndFocus("${baseId}_label", "${baseId}"); return false;' referenceControlId=${baseId}>${msg}</a>`;
-    
-    // Force WET4-style inline error display below the label
-    setTimeout(() => {
-      const label = document.getElementById(baseId + '_label');
-      if (label) {
-        const errId = baseId + '_err';
-        let errSpan = document.getElementById(errId);
-        if (!errSpan) {
-          errSpan = document.createElement('span');
-          errSpan.id = errId;
-          errSpan.className = 'label label-danger wrapped';
-          label.appendChild(document.createElement('br'));
-          label.appendChild(errSpan);
-        }
-        errSpan.textContent = msg;
-        errSpan.style.display = '';
-      }
-      
-      // Mark input as invalid
-      if (el) {
-        el.classList.add('error');
-        el.setAttribute('aria-invalid', 'true');
-        const errId = baseId + '_err';
-        const describedBy = el.getAttribute('aria-describedby') || '';
-        if (!describedBy.includes(errId)) {
-          el.setAttribute('aria-describedby', (describedBy + ' ' + errId).trim());
-        }
-      }
-    }, 0);
-    
-    return false;
-  }
-  return true;
+// Small shared helper — same targeting pattern you use elsewhere
+function _fileInputFor(src){
+  var baseId = src && src.controltovalidate ? src.controltovalidate : '';
+  return document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
 }
+
+/**
+ * Validate that the picked file is NOT zero bytes.
+ * Returns:
+ *   true  -> no file picked OR size > 0
+ *   false -> file picked and size === 0
+ */
+function validateFileNotZero(src){
+  var fin = _fileInputFor(src);
+  if (!fin) return true;                         // can't validate → don't block
+  var f = fin.files && fin.files[0];
+  if (!f) return true;                           // no new file → let "required" handle presence
+  return f.size !== 0;                           // only fail on exactly zero
+}
+
+/**
+ * Validate that the picked file does NOT exceed the max size.
+ * Max resolution order:
+ *   1) data-max-bytes on the input (string int)
+ *   2) window.DEFAULT_MAX_FILE_BYTES (number)
+ *   3) 4 MiB default
+ *
+ * Returns:
+ *   true  -> no file picked OR size <= max
+ *   false -> file picked and size > max
+ */
+function validateFileMaxSize(src){
+  var fin = _fileInputFor(src);
+  if (!fin) return true;
+  var f = fin.files && fin.files[0];
+  if (!f) return true;
+
+  var fromAttr = fin.getAttribute('data-max-bytes');
+  var maxBytes =
+    (fromAttr && !isNaN(fromAttr)) ? parseInt(fromAttr, 10) :
+    (typeof window.DEFAULT_MAX_FILE_BYTES === 'number' ? window.DEFAULT_MAX_FILE_BYTES :
+     4 * 1024 * 1024); // 4 MiB
+
+  return f.size <= maxBytes;
+}
+
 
 // Accept only: PDF, JPG, PNG, GIF
 function validateFileType(source) {
