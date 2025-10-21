@@ -434,16 +434,21 @@ function validateFileMaxSize(src){
   return f.size <= maxBytes;
 }
 
-// Accept only: PDF, JPG, PNG, GIF
+// Accept file types based on data-allowed-ext attribute or default: PDF, JPG, PNG, GIF
 function validateFileType(source) {
-  const allowed = new Set(['pdf', 'jpg', 'png', 'gif']); // hard-coded set per requirements
-
   // Power Pages: try *_input_file first, then raw id
   let $inp = $('#' + source.controltovalidate + '_input_file');
   if (!$inp.length) $inp = $('#' + source.controltovalidate);
 
   const el = $inp.get(0);
   if (!el || !el.files || el.files.length === 0) return true; // nothing selected → let "required" handle presence
+
+  // Read allowed extensions from data-allowed-ext attribute, or use default
+  const allowedExtStr = el.getAttribute('data-allowed-ext') || '';
+  const allowedList = allowedExtStr
+    ? allowedExtStr.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean)
+    : ['pdf', 'jpg', 'png', 'gif']; // default set
+  const allowed = new Set(allowedList);
 
   const file = el.files[0]; // only check the first file
   const name = String(file.name || '').trim();
