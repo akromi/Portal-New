@@ -27,7 +27,7 @@ $(document).ready(function(){
 
   var curlang = $('html').attr('data-lang') || "en";
 
-  //$("input").removeAttr("placeholder");
+  $("input").removeAttr("placeholder");
   
   $("select").css({ "width": "100%" });
   $("input:not([type='radio'])").css({ "width": "100%" });
@@ -48,8 +48,8 @@ $(document).ready(function(){
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
 
 
-  const styleString = "width:100% ;font-size: 16px; line-height:35px; padding: 0 12px;";
-  $(".form-control").attr('style', styleString);
+  //const styleString = "width:100% ;font-size: 16px; line-height:35px; padding: 0 12px;";
+  //$(".form-control").attr('style', styleString);
 
 
   $("#ethi_nextcanadadate").attr("type", "date");
@@ -57,9 +57,7 @@ $(document).ready(function(){
   $("#ethi_embarkationdate").attr("type", "date");
   $("#ethi_disembarkationdate").attr("type", "date");
 
-//$('ethi_nextcanadadate').lang = 'fr-CA';
-
-
+  initWetDatePolyfill(['ethi_embarkationdate','ethi_disembarkationdate']);
 
   $("select").each(function () {
     if (!$(this).parent().hasClass("select-icon")) {
@@ -72,12 +70,13 @@ $(document).ready(function(){
   if ($("#ethi_othernextcanadianport").val()) { $("#ethi_othernextcanadianport").parent().parent().show() }
   else { $("#ethi_othernextcanadianport").parent().parent().hide() };
 
-  var captainsEmailAddressLabel = $("#ethi_captainsemailaddress_label").text().trim();
-  var medicalContactEmailAddressLabel = $("#ethi_medicalcontactemailaddress_label").text().trim();
-  var yourPhoneNumberLabel = $("#ethi_yourphonenumber_label").text().trim();
-  var yourTitleLabel = $("#ethi_yourtitle_label").text().trim();
-  var yourEmailAddressLabel = $("#ethi_youremailaddress_label").text().trim();
-  var yourNameLabel = $("#ethi_yourname_label").text().trim();
+  const captainsEmailAddressLabel = $("#ethi_captainsemailaddress_label").text().trim();
+  const medicalContactEmailAddressLabel = $("#ethi_medicalcontactemailaddress_label").text().trim();
+  const yourPhoneNumberLabel = $("#ethi_yourphonenumber_label").text().trim();
+  const yourTitleLabel = $("#ethi_yourtitle_label").text().trim();
+  const yourEmailAddressLabel = $("#ethi_youremailaddress_label").text().trim();
+  const yourNameLabel = $("#ethi_yourname_label").text().trim();  
+  const nextCanadaDateLabel = $("#ethi_nextcanadadate").text().trim();
 
   var fields = [
     {
@@ -181,17 +180,22 @@ $(document).ready(function(){
       required: true,
       validators: [validateRequired]
     },
-      {
+    {
       id: 'ethi_nextcanadadate',
       type: 'date',
       length: 10,
       required: true,
       validators: [
-              {
+      {
+          validator: validateDateOnly,
+          message_en: nextCanadaDateLabel + " " + "{{snippets['ethi-invalid']}}",
+          message_fr: nextCanadaDateLabel + " " + "{{snippets['ethi-invalid']}}"
+      },
+      {
           validator: function () { return compare2Dates('ethi_nextcanadadate', 'ethi_disembarkationdate'); },
           message_en: "{{snippets['ethi-gi-nextportdate']}}",
           message_fr: "{{snippets['ethi-gi-nextportdate']}}"
-        }
+      }
       ]
     },
     {
