@@ -4,6 +4,8 @@
 
 The `file-native-bridge.js` module provides a native/stock file-upload error "bridge" that converts browser and Power Pages file validation messages into WET4-compliant inline + summary UX.
 
+**NEW: Per-Form Opt-In Model** — The bridge no longer auto-registers all file inputs globally. You must explicitly enable it for each form that needs file validation.
+
 ## Features
 
 - ✅ **Single Error Display**: Shows only one error at a time, respecting validator order: required → zero-byte → max-size → file-type
@@ -12,6 +14,7 @@ The `file-native-bridge.js` module provides a native/stock file-upload error "br
 - ✅ **Accessible**: Reuses existing inline error rendering and summary pipeline
 - ✅ **Integrated**: Works seamlessly with existing validation flow
 - ✅ **Auto-suppression**: Hides stock/PP file error blocks automatically
+- ✅ **Per-Form Opt-In**: Only validates file inputs in forms that explicitly enable the bridge
 
 ## Quick Start
 
@@ -26,17 +29,48 @@ Add the script to your page **after** jQuery and the existing validators:
 <script src="file-native-bridge.js"></script>
 ```
 
-### 2. Basic Usage
+### 2. Opt-In Per Form
 
-The bridge auto-registers all file inputs that end with `_input_file` on page load:
+**IMPORTANT**: The bridge will NOT validate any file inputs unless you opt-in a form using one of these methods:
+
+#### Method A: Markup (Recommended)
+
+Add `data-file-bridge="on"` to your form element:
 
 ```html
-<label id="myfile_label" for="myfile_input_file">Upload Document</label>
-<input type="file" id="myfile_input_file" />
+<form data-file-bridge="on">
+  <label id="myfile_label" for="myfile_input_file">Upload Document</label>
+  <input type="file" id="myfile_input_file" />
+  <button type="submit">Submit</button>
+</form>
 ```
 
-That's it! The bridge will automatically:
-- Register the input for validation
+#### Method B: Programmatic
+
+Call `FileStockSuppression.enableForForm()` on page load:
+
+```html
+<form id="myForm">
+  <label id="myfile_label" for="myfile_input_file">Upload Document</label>
+  <input type="file" id="myfile_input_file" />
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+  // Enable by selector
+  FileStockSuppression.enableForForm('#myForm');
+  
+  // Or enable by element reference
+  const form = document.getElementById('myForm');
+  FileStockSuppression.enableForForm(form);
+  
+  // Or use the alias
+  FileStockSuppression.registerForm('#myForm');
+</script>
+```
+
+Once opted in, the bridge will automatically:
+- Register all file inputs within that form
 - Use default allowed extensions: pdf, jpg, png, gif
 - Use default max size: 4 MB
 - Show appropriate error messages in EN or FR based on `<html lang="...">`
@@ -115,20 +149,22 @@ Override default messages with data attributes:
 
 ## Advanced Usage
 
-### Manual Registration
+### Manual Registration (Advanced)
 
-Register file inputs manually (useful for dynamically added fields):
+For dynamically added fields or fine-grained control:
 
 ```javascript
-// Register a single file input
+// Register a single file input (only works if its form is opted in)
 window.FileStockSuppression.register('myfile');
-
-// Register all file inputs
-window.FileStockSuppression.registerAll();
 
 // Unregister a file input
 window.FileStockSuppression.unregister('myfile');
+
+// Unregister all file inputs across all forms
+window.FileStockSuppression.unregisterAll();
 ```
+
+**Note**: `register('myfile')` is a **no-op** unless the input's ancestor form has `data-file-bridge="on"` or was enabled via `enableForForm()`. This ensures the bridge only activates on opted-in forms.
 
 ### Integration with validations.js
 
@@ -138,7 +174,7 @@ The bridge automatically integrates with the existing `addChangeEvents` flow. Wh
 addChangeEvents('myfile', 'file');
 ```
 
-It will also call `window.FileStockSuppression.register('myfile')` automatically.
+It will also call `window.FileStockSuppression.register('myfile')` automatically. However, if the form is not opted in, the registration will be silently skipped.
 
 ## Validation Order
 
@@ -167,19 +203,31 @@ This ensures users see the most important error first.
     <ul></ul>
   </div>
 
-  <!-- File Upload Field -->
-  <label id="contract_label" for="contract_input_file">
-    <span class="field-name">Contract Document</span>
-    <strong class="required">(required)</strong>
-  </label>
-  <input type="file" 
-         id="contract_input_file"
-         data-allowed-ext="pdf,docx"
-         data-max-bytes="5242880"
-         data-msg-required-en="A contract document is required"
-         data-msg-required-fr="Un document de contrat est requis"
-         data-msg-max-en="Contract must be under {MB} MB"
-         data-msg-max-fr="Le contrat doit faire moins de {MB} Mo" />
+  <!-- Form WITH opt-in - File validation will work -->
+  <form data-file-bridge="on">
+    <label id="contract_label" for="contract_input_file">
+      <span class="field-name">Contract Document</span>
+      <strong class="required">(required)</strong>
+    </label>
+    <input type="file" 
+           id="contract_input_file"
+           data-allowed-ext="pdf,docx"
+           data-max-bytes="5242880"
+           data-msg-required-en="A contract document is required"
+           data-msg-required-fr="Un document de contrat est requis"
+           data-msg-max-en="Contract must be under {MB} MB"
+           data-msg-max-fr="Le contrat doit faire moins de {MB} Mo" />
+    <button type="submit">Submit</button>
+  </form>
+
+  <!-- Form WITHOUT opt-in - File validation will NOT run -->
+  <form>
+    <label id="review_file_label" for="review_file_input_file">
+      Review File (No Validation)
+    </label>
+    <input type="file" id="review_file_input_file" />
+    <button type="submit">Submit Review</button>
+  </form>
 
   <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -189,7 +237,7 @@ This ensures users see the most important error first.
   <script src="file-native-bridge.js"></script>
 
   <script>
-    // Add validators
+    // Add validators (only the opted-in form will validate files)
     addValidators([{
       id: 'contract',
       type: 'file',
@@ -205,10 +253,11 @@ This ensures users see the most important error first.
 
 ### Bridge Not Working?
 
-1. **Check script load order**: Bridge must load after jQuery, validators.js, validations.js
-2. **Check console**: Look for `[file-bridge]` log messages
-3. **Verify input ID**: Must end with `_input_file` or match base ID exactly
-4. **Check Page_Validators**: Run `console.log(Page_Validators)` to see if bridge validators are added
+1. **Check form opt-in**: Ensure your form has `data-file-bridge="on"` OR you called `FileStockSuppression.enableForForm()`
+2. **Check script load order**: Bridge must load after jQuery, validators.js, validations.js
+3. **Check console**: Look for `[file-bridge]` log messages
+4. **Verify input ID**: Must end with `_input_file` or match base ID exactly
+5. **Check Page_Validators**: Run `console.log(Page_Validators)` to see if bridge validators are added
 
 ### Multiple Errors Showing?
 
@@ -230,24 +279,42 @@ document.documentElement.setAttribute('lang', 'fr');
 
 ## API Reference
 
-### FileStockSuppression.register(id)
-Register a file input for bridge validation.
-- **id** (string): Base ID of the file input (without `_input_file` suffix)
+### FileStockSuppression.enableForForm(formSelectorOrEl)
+Enable the bridge for a specific form and auto-register all its file inputs.
+- **formSelectorOrEl** (string | Element): CSS selector or form element
+- **Returns**: Number of file inputs registered
 
-### FileStockSuppression.registerAll()
-Register all file inputs on the page that end with `_input_file`.
+```javascript
+// By selector
+FileStockSuppression.enableForForm('#myForm');
+
+// By element
+const form = document.getElementById('myForm');
+FileStockSuppression.enableForForm(form);
+```
+
+### FileStockSuppression.registerForm(formSelectorOrEl)
+Alias for `enableForForm()`.
+
+### FileStockSuppression.register(id)
+Register a file input for bridge validation (only if its form is opted in).
+- **id** (string): Base ID of the file input (without `_input_file` suffix)
 
 ### FileStockSuppression.unregister(id)
 Unregister a file input and remove its bridge validators.
 - **id** (string): Base ID of the file input
 
+### FileStockSuppression.unregisterAll()
+Unregister all file inputs across all forms.
+
 ## Technical Details
 
 ### How It Works
 
-1. On page load, finds all `input[type="file"][id$="_input_file"]`
-2. For each file input:
-   - Creates a bridge validator object
+1. On page load, finds all `form[data-file-bridge="on"]` elements
+2. For each opted-in form:
+   - Finds all `input[type="file"][id$="_input_file"]` within that form
+   - Creates a bridge validator object for each
    - Adds it to `Page_Validators` array (after existing validators for that field)
    - Hooks into the `invalid` event to prevent native browser tooltips
    - Calls `suppressStockFileErrors` to hide PP stock messages
@@ -255,6 +322,7 @@ Unregister a file input and remove its bridge validators.
    - Bridge validator checks all conditions in order
    - Sets `validator.errormessage` to localized message link
    - Returns true/false to integrate with existing error rendering
+4. Forms without `data-file-bridge="on"` are ignored — their file inputs will NOT be validated by the bridge
 
 ### Compatibility
 

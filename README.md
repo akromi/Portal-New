@@ -9,12 +9,14 @@ This repository contains a comprehensive file upload validation system for Power
 - **validators.js** - Core validator functions (validateFileSelected, validateFileNotZero, validateFileMaxSize, validateFileType)
 - **validations.js** - Global validation orchestration, error rendering, and accessibility framework
 - **fileInput.js** - File input accessibility helpers and stock error suppression
-- **file-native-bridge.js** - NEW: Native file validation bridge with EN/FR localization
+- **file-native-bridge.js** - Native file validation bridge with EN/FR localization and **per-form opt-in**
 
 ### Recent Updates
 
-#### File Native Bridge (NEW)
+#### File Native Bridge (Per-Form Opt-In Model)
 A native/stock file-upload error "bridge" that converts browser/PP file validation messages into WET4-compliant inline + summary UX.
+
+**NEW: Opt-In Required** — The bridge no longer auto-registers all file inputs globally. You must explicitly enable it for each form.
 
 **Features:**
 - Single error display (respects order: required → zero-byte → max-size → file-type)
@@ -23,13 +25,27 @@ A native/stock file-upload error "bridge" that converts browser/PP file validati
 - Per-field message customization
 - Automatic integration with existing validation pipeline
 - Stock error suppression
+- **Per-form opt-in to prevent unintended validation**
 
-**Quick Start:**
+**How to Enable:**
+
+Method 1 - Markup (Recommended):
 ```html
-<input type="file" id="myfile_input_file" 
-       data-allowed-ext="pdf,docx,xlsx"
-       data-max-bytes="5242880" />
+<form data-file-bridge="on">
+  <input type="file" id="myfile_input_file" 
+         data-allowed-ext="pdf,docx,xlsx"
+         data-max-bytes="5242880" />
+</form>
 ```
+
+Method 2 - Programmatic:
+```javascript
+FileStockSuppression.enableForForm('#myForm');
+// or
+FileStockSuppression.registerForm(document.getElementById('myForm'));
+```
+
+**Important**: Forms without `data-file-bridge="on"` will NOT have their file inputs validated by the bridge. This prevents validation on submission review pages or other pages where file validation is not desired.
 
 See [FILE-BRIDGE-USAGE.md](FILE-BRIDGE-USAGE.md) for complete documentation.
 
@@ -48,9 +64,14 @@ See [FILE-BRIDGE-USAGE.md](FILE-BRIDGE-USAGE.md) for complete documentation.
 <script src="file-native-bridge.js"></script>
 ```
 
-2. The bridge auto-registers all file inputs on page load
+2. Enable the bridge for forms that need file validation:
+```html
+<form data-file-bridge="on">
+  <!-- file inputs here will be validated -->
+</form>
+```
 
-3. Validation runs automatically on change/submit
+3. Validation runs automatically on change/submit for opted-in forms
 
 ### Documentation
 
