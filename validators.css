@@ -117,3 +117,71 @@ span.wrapped {
     min-height: 44px;
   }
 }
+
+/* iOS fix: keep radio options tight and left-aligned in patched groups */
+.wet-patched-radio fieldset.wet-radio-fieldset { 
+  text-align: left;              /* defeat any right-align at mobile */
+}
+
+.wet-patched-radio fieldset.wet-radio-fieldset label.radio-inline {
+  display: inline-flex;          /* keep bullet + text together */
+  align-items: center;
+  white-space: nowrap;
+  margin-right: 1.25rem;         /* gap between “No” and “Yes” */
+  padding: 0 !important;         /* cancel Bootstrap/WET left padding */
+  width: auto !important;        /* avoid 100% width on small screens */
+  float: none !important;        /* defeat any inherited floats */
+  max-width: none;
+}
+
+.wet-patched-radio fieldset.wet-radio-fieldset label.radio-inline input[type="radio"] {
+  position: static !important;   /* cancel legacy absolute positioning */
+  margin: 0 .45rem 0 0;          /* “○ No  ○ Yes” spacing */
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+/* --- merged additions from custom.css --- */
+/* ===== Additions moved from custom.css (validator UI) ===== */
+/* == 5) Validation/Error States ============================================== */
+.form-control.error,
+input.error,
+select.error,
+textarea.error {
+border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+  outline: none;
+}
+
+/* Container-level error state */
+.has-error .form-control,
+.has-error .form-control:focus {
+border-color: var(--error-color);
+  box-shadow: var(--error-shadow);
+}
+
+/* Visible validator text */
+.validators span[id^="RequiredFieldValidator"],
+.validators span[id^="DateFormatValidator"] {
+color: var(--error-color);
+  font-weight: bold;
+}
+
+/* old IE/Edge quirk */
+
+/* == 10) Read-only Summary View ============================================= */
+.crmEntityFormView .table-info.required .field-label::after,
+.crmEntityFormView label.required::after,
+.crmEntityFormView .required .field-label::after,
+.crmEntityFormView abbr[title="required"],
+.crmEntityFormView abbr[title="(required)"],
+.crmEntityFormView .validators span {
+content: none !important;
+  display: none !important;
+}
+
+body.read-only-summary .crmEntityFormView .table-info .validators {
+margin: 0 !important;
+  padding: 0 !important;
+}
+
