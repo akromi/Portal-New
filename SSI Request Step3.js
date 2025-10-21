@@ -1,28 +1,27 @@
 // SSI Step 3 
 window.addEventListener("load", (e) => {
   debugger;
+  
   document.title =   "{{snippets['ethi-ssi-step3']}}"  + " - " +  "{{snippets['ethi-ssi-request-title']}}";
-  const styleString = "width:100% ;font-size: 16px; line-height:35px; padding: 0 12px;";
-  $(".form-control").attr('style', styleString);
+
   $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step3']}}"+"</h2>")
-  $("input:not([type='radio']):not([type='button']):not([id='wb-srch-q'])").css({"width": "550px"});
   $(".tab-title").css("padding-bottom", "30px");
-  //$("select").css({"width": "550px"})
   $("h2[class='tab-title']").hide();
   $("input").removeAttr("placeholder");
   $("#wb-lng").attr("class","text-right");
-  //$("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
-
   $('#wb-sm').remove();
-
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
   
   $("select").each(function () {
     if (!$(this).parent().hasClass("select-icon")) {
-      $(this).wrap('<div class="select-icon" style="width:550px;"></div>');
+      $(this).wrap('<div class="select-icon"></div>');
       $(this).after('<i class="fas fa-chevron-down" aria-hidden="true"></i>');
     }
   });
+
+     //Patch dropdowns to show the chevron.
+  // document.querySelectorAll('.crmEntityFormView .control select.form-control')
+  // .forEach(el => el.classList.add('select--bg-arrow'));
 
   if ($("#ethi_otherregistryflag").val()) { $("#ethi_otherregistryflag").parent().parent().show() }
   else { $("#ethi_otherregistryflag").parent().parent().hide() };
