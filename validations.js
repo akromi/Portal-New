@@ -257,6 +257,7 @@ function globalEvaluationFunction() {
 
   // 4) Rebuild the summary list to exactly match the de-duped items
   setTimeout(function () {
+    var focused = $(':focus');
     var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
@@ -267,6 +268,7 @@ function globalEvaluationFunction() {
       // No errors → hide the summary and clear heading
       $sum.find('> h2').text('');
       $sum.hide();
+      try { focused.focus(); } catch (e) {}
       return;
     }
 
@@ -288,22 +290,8 @@ function globalEvaluationFunction() {
     );
 
     $sum.find('a').css('text-decoration', 'underline');
-    $sum.show();
-    
-    // Focus the summary exactly once per submit attempt (not on every change event)
-    // Only focus if this is a fresh submit attempt (not already focused)
-    if (!globalEvaluationFunction._summaryFocused) {
-      globalEvaluationFunction._summaryFocused = true;
-      setTimeout(function() {
-        try {
-          $sum.blur().focus();
-          // Reset flag after a short delay so subsequent submits can focus again
-          setTimeout(function() {
-            globalEvaluationFunction._summaryFocused = false;
-          }, 100);
-        } catch(e) {}
-      }, 50);
-    }
+    $sum.blur().show();
+    try { focused.focus(); } catch (e) {}
   }, 250);
 
   return true;
@@ -331,55 +319,6 @@ function createGlobalValidator() {
 // Utility functions used internally by the library
 //
 
-// ARIA describedby helpers (public, idempotent)
-/**
- * Ensures that the given id is included in the element's aria-describedby attribute.
- * Safe for both jQuery objects and native DOM elements. De-dupes space-separated list.
- * @param {jQuery|HTMLElement} elOr$El - The element (jQuery or native)
- * @param {string} idToAdd - The ID to add to aria-describedby
- */
-function addIdToDescribedby(elOr$El, idToAdd) {
-  if (!elOr$El || !idToAdd) return;
-  
-  var $el = elOr$El.jquery ? elOr$El : $(elOr$El);
-  if (!$el.length) return;
-  
-  var current = String($el.attr('aria-describedby') || '').trim();
-  var ids = current ? current.split(/\s+/) : [];
-  
-  // De-dupe: only add if not already present
-  if (ids.indexOf(idToAdd) === -1) {
-    ids.push(idToAdd);
-    $el.attr('aria-describedby', ids.join(' '));
-  }
-}
-
-/**
- * Removes the given id from the element's aria-describedby attribute.
- * Cleans up extra spaces; removes the attribute entirely if empty.
- * @param {jQuery|HTMLElement} elOr$El - The element (jQuery or native)
- * @param {string} idToRemove - The ID to remove from aria-describedby
- */
-function removeIdFromDescribedby(elOr$El, idToRemove) {
-  if (!elOr$El || !idToRemove) return;
-  
-  var $el = elOr$El.jquery ? elOr$El : $(elOr$El);
-  if (!$el.length) return;
-  
-  var current = String($el.attr('aria-describedby') || '').trim();
-  if (!current) return;
-  
-  var ids = current.split(/\s+/).filter(function(id) {
-    return id !== idToRemove;
-  });
-  
-  if (ids.length === 0) {
-    $el.removeAttr('aria-describedby');
-  } else {
-    $el.attr('aria-describedby', ids.join(' '));
-  }
-}
-
 // Updates the label's error messages as per WET accessibility requirements
 // PRIVATE
 function updateLabelErrorMessage(id, type, message) {
@@ -388,9 +327,6 @@ function updateLabelErrorMessage(id, type, message) {
 
   // Keep red frame + a11y state while invalid
   $field.addClass('error').attr('aria-invalid', 'true');
-  
-  // Add error ID to aria-describedby for accessibility
-  addIdToDescribedby($field, id + '_err');
 
   // Get ALL spans with exact id (jQuery $('#id') returns only the first if duplicates exist)
   let $errs = $label.find("span[id='" + id + "_err']");
@@ -433,9 +369,6 @@ function clearFieldErrorUI(id, type) {
 
   $field.removeClass('error')
         .attr('aria-invalid', 'false');  // a11y state
-  
-  // Remove error ID from aria-describedby for accessibility
-  removeIdFromDescribedby($field, id + '_err');
 
   // Remove inline error + any preceding <br>
   const $err = $label.find('#' + id + '_err');
@@ -499,38 +432,6 @@ function getFocusableField(id, type) {
 }
 
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
-
-/**
- * Hides fields by applying aria-hidden="true" and display:none.
- * Useful for backing/system fields that should not be visible to users or AT.
- * @param {string[]} ids - Array of element IDs to hide
- */
-function hideFields(ids) {
-  if (!Array.isArray(ids)) ids = [ids];
-  ids.forEach(function(id) {
-    var $el = $('#' + id);
-    if ($el.length) {
-      $el.attr('aria-hidden', 'true')
-         .css('display', 'none');
-    }
-  });
-}
-
-/**
- * Adds numeric affordance to inputs (inputmode="numeric" and pattern for digits).
- * Helps mobile users get numeric keyboards.
- * @param {string[]} ids - Array of input element IDs
- */
-function addNumericAffordance(ids) {
-  if (!Array.isArray(ids)) ids = [ids];
-  ids.forEach(function(id) {
-    var $el = $('#' + id);
-    if ($el.length && $el.is('input')) {
-      $el.attr('inputmode', 'numeric')
-         .attr('pattern', '[0-9]*');
-    }
-  });
-}
 
 // Accepts 'YYYY-MM-DD' and 'HH:mm' (24h). Returns 'YYYY-MM-DD' or 'YYYY-MM-DD HH:mm'
 function getCompositeDateTimeValue(baseId) {
@@ -756,7 +657,7 @@ function addChangeEvents(id, type) {
     const $timeUI = $(`#${id}_timepicker_description, #${id}_timepicker`);
     const $dp     = $dateUI.closest('.datetimepicker'); // PP date widget wrapper
 
-    // 👇 detect time-only group once, up-front
+    // detect time-only group once, up-front
     const isTimeOnlyGroup =
       $('#' + id).closest('.form-control-cell')
                  .find('.input-group[data-pp-time-only="1"]').length > 0;
@@ -777,7 +678,7 @@ function addChangeEvents(id, type) {
       .on('input.vchg keyup.vchg paste.vchg change.vchg blur.vchg compositionend.vchg', function (e) {
         mirror();
         // nudge PP's own "validate-on-change" logic just like your text boxes
-        if (!isTimeOnlyGroup) { $('#' + id).trigger('change'); } // ❌ skip for time-only
+        if (!isTimeOnlyGroup) { $('#' + id).trigger('change'); } //  skip for time-only
         handler(e);
       });
 
@@ -1657,44 +1558,56 @@ function _ppMarkRequired(baseId, hasValue, opts) {
 
 // ---- Join a date-only + time-only into a hidden portal field ----------------
 function wirePortalComposite(opts) {
-  var dateId  = opts.dateId;   // e.g., 'ethi_nextcanadadate'
-  var timeId  = opts.timeId;   // e.g., 'ethi_nextcanadatime'
-  var portalId= opts.portalId; // e.g., 'ethi_nextcanadadateandtimeportal'
+  var dateId   = opts.dateId;    // e.g., 'ethi_nextcanadadate'
+  var timeId   = opts.timeId;    // e.g., 'ethi_nextcanadatime'
+  var portalId = opts.portalId;  // e.g., 'ethi_nextcanadadateandtimeportal'
 
-  var $date = $('#' + dateId + '_datepicker_description');
-  if (!$date.length) $date = $('#' + dateId + '_datepicker'); // fallback
+  // Prefer native/base inputs first; fall back to PP-visible partners if present
+  var $date = $('#' + dateId);
+  if (!$date.length) $date = $('#' + dateId + '_datepicker_description');
+  if (!$date.length) $date = $('#' + dateId + '_datepicker');
 
-  var $time = $('#' + timeId + '_timepicker_description');
-  if (!$time.length) $time = $('#' + timeId + '_datepicker_description'); // fallback if not yet renamed
+  var $time = $('#' + timeId);
+  if (!$time.length) $time = $('#' + timeId + '_timepicker_description');
+  if (!$time.length) $time = $('#' + timeId + '_timepicker');
+  if (!$time.length) $time = $('#' + timeId + '_datepicker_description'); // last-resort fallback
 
   var $portal = $('#' + portalId);
   if (!$portal.length) return; // nothing to do
 
   function normDate(s) {
-    s = String(s||'').trim();
+    s = String(s || '').trim();
     var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (m) return m[1] + '-' + m[2] + '-' + m[3];
     var m2 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (m2) { var dd=('0'+m2[1]).slice(-2), mm=('0'+m2[2]).slice(-2), yy=m2[3]; return yy+'-'+mm+'-'+dd; }
+    if (m2) {
+      var dd=('0'+m2[1]).slice(-2), mm=('0'+m2[2]).slice(-2), yy=m2[3];
+      return yy + '-' + mm + '-' + dd;
+    }
     return '';
   }
   function normTime(s) {
-    if (typeof normalizeTime === 'function') return normalizeTime(String(s||''));
-    s = String(s||'').trim();
+    if (typeof normalizeTime === 'function') return normalizeTime(String(s || ''));
+    s = String(s || '').trim();
     var m = s.match(/^\s*(\d{1,2}):([0-5]\d)\s*([AaPp][Mm])?\s*$/);
-    if (m) { var h=parseInt(m[1],10), mm=m[2]; if (m[3]) { var pm=/p/i.test(m[3]); h=(h%12)+(pm?12:0); } return ('0'+h).slice(-2)+':'+mm; }
+    if (m) {
+      var h = parseInt(m[1], 10), mm = m[2];
+      if (m[3]) { var pm = /p/i.test(m[3]); h = (h % 12) + (pm ? 12 : 0); }
+      return ('0'+h).slice(-2) + ':' + mm;
+    }
     var m2 = s.match(/^\s*([01]?\d|2[0-3])\s*[hH]\s*([0-5]\d)\s*$/);
-    if (m2) return ('0'+m2[1]).slice(-2)+':'+m2[2];
+    if (m2) return ('0'+m2[1]).slice(-2) + ':' + m2[2];
     return '';
   }
+
   function recompute() {
     var d = normDate($date.val());
     var t = normTime($time.val());
-    var v = (d && t) ? (d + ' ' + t) : '';     // only populate when both parts exist
+    var v = (d && t) ? (d + ' ' + t) : '';
     if ($portal.val() !== v) $portal.val(v);
   }
 
-  // Initial + live updates
+  // Initial + live updates on base/visible inputs
   recompute();
   $date.off('.portalJoin').on('input.portalJoin change.portalJoin blur.portalJoin', recompute);
   $time.off('.portalJoin').on('input.portalJoin change.portalJoin blur.portalJoin', recompute);
@@ -1703,10 +1616,10 @@ function wirePortalComposite(opts) {
   try {
     var formEl = $portal.closest('form').get(0) || $date.closest('form').get(0) || $time.closest('form').get(0);
     if (formEl && !formEl['_ppPortalJoin_' + portalId]) {
-      formEl.addEventListener('submit', function(){ recompute(); }, true);
+      formEl.addEventListener('submit', function () { recompute(); }, true);
       formEl['_ppPortalJoin_' + portalId] = true;
     }
-  } catch(_) {}
+  } catch (_) {}
 }
 
 
@@ -2045,3 +1958,26 @@ $(function () {
   });
 });
 
+// Put near your other helpers
+function initWetDatePolyfill(ids){
+  var wet$ = window.jQuery || window.$wet;
+  ids = Array.isArray(ids) ? ids : [ids].filter(Boolean);
+
+  ids.forEach(id => {
+    var el = document.getElementById(id);
+    if (el) { el.type = 'date'; el.classList.add('wb-date'); }
+  });
+
+  // bilingual watermark
+  var isFr = (document.documentElement.lang || 'en').toLowerCase().startsWith('fr');
+  ids.forEach(id => {
+    var el = document.getElementById(id);
+    if (el) el.setAttribute('placeholder', isFr ? 'AAAA-MM-JJ' : 'YYYY-MM-DD');
+  });
+
+  // trigger the polyfill with WET's jQuery
+  if (wet$) {
+    var nodes = ids.map(id => document.getElementById(id)).filter(Boolean);
+    wet$(document).trigger('wb-init.wb-date', [nodes]);
+  }
+}
