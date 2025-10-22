@@ -84,7 +84,7 @@ function removeAccessibilityMods(id) {
 // an event to allow us to inject validations.
 //
 //
-
+//
 // PRIVATE
 // PRIVATE
 // function globalEvaluationFunction() {
@@ -1965,6 +1965,7 @@ function closeSimpleTimeOverlay(){
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
   });
 })(window.jQuery || window.$);
+
 // Safety net: fix pattern on any already-rendered time-only groups
 $(function () {
   $('.form-control-cell .input-group[data-pp-time-only="1"]').each(function () {
@@ -2012,4 +2013,3 @@ function initWetDatePolyfill(ids){
   }
 }
 // 
-
