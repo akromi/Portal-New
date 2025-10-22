@@ -5,13 +5,57 @@
 
 /* ==================== INLINE ERROR MESSAGES ==================== */
 
-span.wrapped {
+/*span.wrapped {
   display: inline-block;
   width: 100%;
   text-wrap: auto;
   text-align: left;
   padding: 5px;
+}*/
+/* Let the container shrink so children can wrap in Safari (flex/table quirk). */
+.table-info,
+.table-info > label,
+.table-info .field-label,
+.form-control-cell,
+.form-group {
+  min-width: 0;
 }
+
+/*  Cross-browser Label wrapping */
+.label.wrapped,
+span.wrapped {
+  display: block;              /* occupy the full line under the label */
+  max-width: 100%;
+  white-space: normal !important;  /* <-- critical: defeats Bootstrap nowrap */
+
+  /* Cross-browser wrapping for long tokens/URLs on Safari/iOS + others */
+  overflow-wrap: anywhere;     /* modern */
+  word-wrap: break-word;       /* legacy alias */
+  word-break: break-word;      /* WebKit/Safari quirk fallback */
+  hyphens: auto;
+
+  text-align: left;
+  padding: 5px;
+}
+
+/* Increase only inline validation error text under field labels */
+.form-group label > .label.label-danger.wrapped,
+[id$="_label"] > .label.label-danger.wrapped {
+  font-size: 14px;          /* adjust as needed (e.g., 14px–18px or 1rem) */
+  line-height: 1.35;        /* keep multi-line messages readable */
+  padding: 0.25em 0.5em;    /* optional: keep the pill comfortable as size grows */
+}
+
+/* Optional: slightly larger on small screens */
+@media (max-width: 480px) {
+  .form-group label > .label.label-danger.wrapped,
+  [id$="_label"] > .label.label-danger.wrapped {
+    font-size: 17px;
+  }
+}
+
+
+
 
 /* ==================== DATE/TIME PICKER ERROR STATES ==================== */
 
@@ -101,6 +145,10 @@ span.wrapped {
   }
 }
 
+@media (max-width: 480px) {
+  .wet-patched-radio label.radio-inline { white-space: normal; }
+}
+
 /* ==================== FILE UPLOAD CONTROLS ==================== */
 
 /* File name as clickable link */
@@ -184,4 +232,5 @@ body.read-only-summary .crmEntityFormView .table-info .validators {
 margin: 0 !important;
   padding: 0 !important;
 }
+
 
