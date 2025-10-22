@@ -146,6 +146,14 @@
       const lastIdx = indices[indices.length - 1];
       window.Page_Validators.splice(lastIdx + 1, 0, bridge);
       DBG('Bridge inserted after index', lastIdx);
+      
+      // Optional: align validationGroup with sibling validators for consistent summary participation
+      const sibling = window.Page_Validators[lastIdx];
+      if (sibling && sibling.validationGroup) {
+        bridge.validationGroup = sibling.validationGroup;
+        bridge.display = sibling.display || 'Dynamic';
+        DBG('Bridge aligned to validationGroup:', sibling.validationGroup);
+      }
     } else {
       window.Page_Validators.push(bridge);
       DBG('Bridge appended (no prior validators for base)', baseId);
@@ -163,9 +171,25 @@
 
     addBridgeValidatorLast(baseId);
 
+    // Per-input re-entrancy guard to avoid loops (e.g., zero-byte files)
     input.addEventListener('invalid', function (e) {
       e.preventDefault();
-      if (typeof window.globalEvaluationFunction === 'function') window.globalEvaluationFunction();
+      
+      // If guard is already set, return early to prevent loop
+      if (input.__bridgeInvalidGuard) return;
+      
+      // Set guard
+      input.__bridgeInvalidGuard = true;
+      
+      // Invoke global evaluation if present
+      if (typeof window.globalEvaluationFunction === 'function') {
+        window.globalEvaluationFunction();
+      }
+      
+      // Clear guard on next tick
+      setTimeout(function() {
+        input.__bridgeInvalidGuard = false;
+      }, 0);
     }, false);
 
     if (typeof window.suppressStockFileErrors === 'function') {
