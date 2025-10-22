@@ -207,6 +207,15 @@ function removeAccessibilityMods(id) {
 //   return true;
 
 function globalEvaluationFunction() {
+  // Re-entrancy guard: prevent tight loops when renderer indirectly retriggers validation
+  if (globalEvaluationFunction._busy) return true;
+  globalEvaluationFunction._busy = true;
+  
+  // Clear guard on next tick (after synchronous execution completes)
+  setTimeout(function() {
+    globalEvaluationFunction._busy = false;
+  }, 0);
+
   // 1) Clear older inline messages
   for (var i = 0; i < Page_Validators.length; i++) {
     var v0 = Page_Validators[i];
@@ -828,6 +837,7 @@ function addValidators(fields) {
   // dynamically.
   $('#NextButton').off('.bindV').on('click.bindV', e => {
     __validators_active = true;
+    window.__validators_active = true;  // Expose globally for delete handler
 
     const seen = new Set();
     Page_Validators.forEach(v => {
@@ -881,6 +891,26 @@ function addValidators(fields) {
 
     // Add global validator last
     Page_Validators.push(createGlobalValidator());
+
+    // Delegated click handler for file delete buttons
+    // Revalidates file fields immediately after delete (post-first-submit)
+    $(document).off('click.fileDelete').on('click.fileDelete', 'button[id$="_delete_button"]', function() {
+        // Derive baseId from button id (strip _delete_button suffix)
+        var buttonId = this.id || '';
+        var baseId = buttonId.replace(/_delete_button$/, '');
+        if (!baseId) return;
+
+        // Run after deleteFile(...) updates the DOM/hidden fields
+        setTimeout(function() {
+            // Revalidate the file field
+            queueFileValidation(baseId, 'file', { isTrusted: true });
+
+            // If validators have been activated (after first submit), refresh summary
+            if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+                globalEvaluationFunction();
+            }
+        }, 0);
+    });
 }
 
 // Removes the custom validators for the field with the supplied id
