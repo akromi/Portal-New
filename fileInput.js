@@ -1,5 +1,5 @@
-
-
+ 
+ 
 // =======================
 // Accessibility helpers (structural only — no UX/labels/handlers)
 // =======================
@@ -68,6 +68,8 @@ function sanitizeFileButtons() {
     $btn.attr('aria-controls', $input.attr('id'));
   });
 }
+
+
 
 
 
@@ -173,6 +175,7 @@ function sanitizeFileButtons() {
   //   observers.set(baseId, obs);
   //   DBG('Observer attached for', baseId);
   // }
+
 
  
 
@@ -431,6 +434,45 @@ function fileI18n() {
           const file = this.files && this.files[0];
           logger.info('block[%d]: onChange fired; hasFile=%s', idx, !!file);
 
+          (function addZeroByteBlock() {
+
+
+  //   BEGIN zero-byte handling
+  //   If a 0-byte file is selected, reset UI, flag invalid, and show an inline error
+  if (file && file.size === 0) {
+    // Clear native selection
+    try { this.value = ''; } catch (_) {}
+    $input.val('');
+
+    // Reset UI to empty state
+    if ($hiddenSpan.length) $hiddenSpan.text('');
+    if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
+    if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
+    if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
+    if ($delBtn.length) $delBtn.hide();
+
+    // Remove any server-file marker
+    $block.removeAttr('data-has-server-file').removeData('has-server-file');
+
+    // a11y
+    $input.attr('aria-invalid', 'true');
+
+    // Bilingual inline error under label
+    const isFr = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr');
+    const msg  = isFr ? 'Le fichier sélectionné est vide.' : 'The selected file is empty.';
+    if (baseId) setInlineErrorForFile(baseId, msg);
+
+    logger.warn('block[%d]: zero-byte file rejected; UI reset and inline error shown', idx);
+    return; // Important: stop normal relabel branch
+  }
+  //   END zero-byte handling
+
+  //   When a valid file is picked, clear any prior inline zero-byte error
+  if (file && file.size > 0 && baseId) clearInlineErrorForFile(baseId);
+
+  //   ...then keep the existing logic that sets filename, Change/Delete, etc.
+  // });
+})();
 
           if (file) {
 
@@ -1079,4 +1121,35 @@ jQuery(function ($) {
   }
 });
 
+function setInlineErrorForFile(baseId, messageHtml) {
+  // Prefer shared helper from validations.js if available
+  if (typeof window.updateLabelErrorMessage === 'function') {
+    try { window.updateLabelErrorMessage(baseId, 'file', messageHtml); return; } catch (_) {}
+  }
+  const $label = $('#' + baseId + '_label');
+  if (!$label.length) return;
+  let $err = $label.find("span[id='" + baseId + "_err']");
+  if (!$err.length) {
+    const last = $label.contents().last();
+    if (!last.length || last[0].nodeName !== 'BR') $label.append('<br />');
+    $label.append('<span id="' + baseId + '_err" class="label label-danger wrapped">' + messageHtml + '</span>');
+  } else {
+    const newTxt = $('<div/>').html(messageHtml).text().replace(/\s+/g, ' ').trim();
+    if ($err.text().replace(/\s+/g, ' ').trim() !== newTxt) $err.html(messageHtml);
+  }
+  $label.find('br + br').remove();
+}
 
+function clearInlineErrorForFile(baseId) {
+  // Prefer validations.js helper if present
+  if (typeof window.clearFieldErrorUI === 'function') {
+    try { window.clearFieldErrorUI(baseId, 'file'); return; } catch (_) {}
+  }
+  const $label = $('#' + baseId + '_label');
+  const $err = $label.find('#' + baseId + '_err');
+  if ($err.length) {
+    const $prev = $err.prev();
+    $err.remove();
+    if ($prev.is('br')) $prev.remove();
+  }
+}
