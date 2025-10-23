@@ -462,24 +462,7 @@ function getCompositeDateTimeValue(baseId) {
   return '';
 }
 
-// Build the composite value PP expects in the backing input.
-// For date-only fields, this returns just the date.
-// function getCompositeDateTimeValue(id){
-//   var dEl = document.getElementById(id + '_datepicker_description') ||
-//             document.getElementById(id + '_datepicker');
-//   var tEl = document.getElementById(id + '_timepicker_description') ||
-//             document.getElementById(id + '_timepicker');
-
-//   var d = (dEl && dEl.value || '').trim();
-//   var t = (tEl && tEl.value || '').trim();
-
-//   return t ? (d ? (d + ' ' + t) : t) : d;
-// }
-
-//
-//
 // The field change event hanlder.
-
 // Finds all validators for the field using it's id, placed in the matchingIndexes array. Each entry is the index into the Page+Validators array.
 // Checks the validity status of the field before and after the validator is executed.
 // If the validity status has changed then the field's error label and the summary DIV gets updated.
@@ -513,6 +496,13 @@ function updatesOnChange(o, evt) {
       removeDuplicateInlineErrors(id);
     }
 
+    // IMPORTANT: declare matching at function scope so it's always defined
+    var matching = [];
+
+    // Defensive: no validators? nothing to do
+    var pv = window.Page_Validators || [];
+    if (!Array.isArray(pv) || pv.length === 0) return;
+
     // find all validators attached to this logical field (PP defaults + custom)
     var targets = [id];
     if (type === 'date') {
@@ -528,12 +518,12 @@ function updatesOnChange(o, evt) {
       targets.push(id + '_timepicker_description', id + '_timepicker');
     }
 
-    var matching = Page_Validators
+    matching = pv
       .map(function (v, i) { return { v: v, i: i }; })
       .filter(function (e) { return targets.indexOf(e.v.controltovalidate) !== -1; });
 
     if (matching.length === 0) {
-      matching = Page_Validators
+      matching = pv
         .map(function (v, i) { return { v: v, i: i }; })
         .filter(function (e) { return e.v.controltovalidate === id; });
     }
@@ -570,10 +560,16 @@ function updatesOnChange(o, evt) {
         anyValidityChanged = true;
       }
     }
+
     // If all validators for this field are now valid → clear its inline UI.
     var allValidForField = matching.every(function (pair) { return pair.v.isvalid !== false; });
     if (allValidForField) {
       clearFieldErrorUI(id, type);
+    }
+
+    // Always refresh the summary after any user-facing change, once validators are active.
+    if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+      setTimeout(globalEvaluationFunction, 0);
     }
 
     // Re-fire a bubbling change only for real user actions (keeps PP logic in sync)
@@ -583,15 +579,12 @@ function updatesOnChange(o, evt) {
 
         if (type === "date") {
           elId = id + "_datepicker_description";
-
         } else if (type === "lookup") {
           var el = document.getElementById(id);
           elId = (el && el.tagName === "SELECT")
             ? id
             : (document.getElementById(id + "_name") ? id + "_name" : id);
-
         } else if (type === "time") {
-          // Prefer the visible time textbox; time-only may reuse *_datepicker_description
           if (document.getElementById(id + "_timepicker_description")) {
             elId = id + "_timepicker_description";
           } else if (document.getElementById(id + "_timepicker")) {
@@ -599,7 +592,6 @@ function updatesOnChange(o, evt) {
           } else if (document.getElementById(id + "_datepicker_description")) {
             elId = id + "_datepicker_description";
           } else {
-            // last resort: if this is a time-only group, don't poke the backer
             var back = document.getElementById(id);
             var cell = back && back.closest ? back.closest(".form-control-cell") : null;
             var isTO = !!(cell && cell.querySelector('.input-group[data-pp-time-only="1"]'));
@@ -617,7 +609,6 @@ function updatesOnChange(o, evt) {
         field.dispatchEvent(evt2);
       }, 0);
     }
-
 
   } finally {
     updatesOnChange._busy[id] = false;
@@ -642,10 +633,29 @@ function addChangeEvents(id, type) {
   if ($dpTop.length) $dpTop.off('.vchg');
   $f.siblings('.input-group-addon, .add-on, .btn').off('.vchg');
 
-  // Baseline (covers typing/paste/IME; perfect for text/number)
-  // Only for non date/time
+  // Baseline (covers typing/paste/IME) — non date/time only
   if (type !== 'date' && type !== 'time') {
-    $f.on('change.vchg input.vchg keyup.vchg paste.vchg blur.vchg', handler);
+    // Add compositionend for IME; add keydown Backspace/Delete fallback
+    $f.on('change.vchg input.vchg keyup.vchg paste.vchg blur.vchg compositionend.vchg', handler)
+      .on('keydown.vchg', function(e){
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          setTimeout(() => handler(e), 0);
+        }
+      });
+
+    // If the focusable partner is not the raw element, mirror bindings on the raw base input too
+    if ($f.length && $f.attr('id') !== id) {
+      const $raw = $('#' + id);
+      if ($raw.length) {
+        $raw.off('.vchg')
+            .on('change.vchg input.vchg keyup.vchg paste.vchg blur.vchg compositionend.vchg', handler)
+            .on('keydown.vchg', function(e){
+              if (e.key === 'Backspace' || e.key === 'Delete') {
+                setTimeout(() => handler(e), 0);
+              }
+            });
+      }
+    }
   }
 
   if (type === 'lookup') {
@@ -661,42 +671,34 @@ function addChangeEvents(id, type) {
   }
 
   if (type === 'date' || type === 'time') {
-    // Prefer the visible UI partners
     const $dateUI = $(`#${id}_datepicker_description, #${id}_datepicker`);
     const $timeUI = $(`#${id}_timepicker_description, #${id}_timepicker`);
-    const $dp     = $dateUI.closest('.datetimepicker'); // PP date widget wrapper
+    const $dp     = $dateUI.closest('.datetimepicker');
 
-    // detect time-only group once, up-front
     const isTimeOnlyGroup =
       $('#' + id).closest('.form-control-cell')
                  .find('.input-group[data-pp-time-only="1"]').length > 0;
 
-    // Mirror both pieces (when present) into the single backing input
     const mirror = () => { $('#' + id).val(getCompositeDateTimeValue(id)); };
 
-    // 1) Picker change → mirror → validate
     if ($dp.length) {
       $dp.off('.vchg').on('dp.change.vchg', function (e) {
         mirror(); handler(e);
       });
     }
 
-    // 2) Typing / paste / clear / blur in either UI input → mirror → validate
     $dateUI.add($timeUI)
       .off('.vchg')
       .on('input.vchg keyup.vchg paste.vchg change.vchg blur.vchg compositionend.vchg', function (e) {
         mirror();
-        // nudge PP's own "validate-on-change" logic just like your text boxes
-        if (!isTimeOnlyGroup) { $('#' + id).trigger('change'); } //  skip for time-only
+        if (!isTimeOnlyGroup) { $('#' + id).trigger('change'); }
         handler(e);
       });
 
-    // 3) Also listen to the backing input in case PP fires there directly
     $('#' + id).off('.vchg').on('change.vchg input.vchg', handler);
   }
 
-
-  // 4) Keep your programmatic setter patch (optional but harmless)
+  // Programmatic setter patch — dispatch BOTH input and change
   (function patchValueSetter(el){
     try {
       if (!el || el.__emitOnSet) return;
@@ -710,9 +712,12 @@ function addChangeEvents(id, type) {
           const old = desc.get.call(this);
           desc.set.call(this, v);
           if (v !== old) {
-            const ev = new Event('change', { bubbles: true });
-            ev.synthetic = true;
-            this.dispatchEvent(ev);
+            const ev1 = new Event('input',  { bubbles: true, cancelable: true });
+            ev1.synthetic = true;
+            this.dispatchEvent(ev1);
+            const ev2 = new Event('change', { bubbles: true, cancelable: true });
+            ev2.synthetic = true;
+            this.dispatchEvent(ev2);
           }
         }
       });
@@ -720,13 +725,11 @@ function addChangeEvents(id, type) {
     } catch(e) { /* no-op */ }
   })(document.getElementById(id));
 
-
   if (type === 'file') {
     const $fin = $('#' + id + '_input_file');
     $fin.off('.vchg')
       .on('change.vchg input.vchg', function (e) {
         queueFileValidation(id, type, e);
-        // was: field.id (undefined) — use id
         window.FileStockSuppression && window.FileStockSuppression.register(id);
       });
   }
@@ -2015,11 +2018,28 @@ function initWetDatePolyfill(ids){
 // 
 
 // public helper to re-run all validators for a field now
-window.revalidate = function revalidate(id, type, _opts) {
+window.revalidate = function revalidate(id, type, opts) {
   try {
+    opts = opts || {};
+    var active = !!(window.__validators_active);
+
+    // Skip quietly until validators are activated, unless explicitly forced
+    if (!active && !opts.force) {
+      return false;
+    }
+
+    // Run the normal per-field validation pipeline
     updatesOnChange({ id: String(id), type: String(type || '') }, { isTrusted: true });
+
+    // Ensure summary rebuilds in forced mode too (pre-activation),
+    // since updatesOnChange only refreshes the summary when active.
+    if (typeof globalEvaluationFunction === 'function') {
+      setTimeout(globalEvaluationFunction, 0);
+    }
+    return true;
   } catch (e) {
     console.warn('revalidate failed for', id, e);
+    return false;
   }
 };
 
