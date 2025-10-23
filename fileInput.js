@@ -380,6 +380,8 @@ function fileI18n() {
           if (cur && !document.getElementById(cur)) $chooseBtn.removeAttr('aria-labelledby');
         }
 
+
+
         // 4) Always keep aria-controls in sync with the real input
         if ($input.length) {
           const inputId = $input.attr('id');
@@ -396,7 +398,7 @@ function fileI18n() {
         const hasFile = !!(nativeLen || hiddenName || (visibleText && visibleText !== T.none));
         logger.debug('block[%d]: state: visibleText=%o hiddenSpan=%o nativeFiles=%d hasFile=%s',
           idx, visibleText, hiddenName, nativeLen, hasFile);
-
+          
         // Idempotent labels for Choose/Change
         const desiredChoose = hasFile ? T.change : T.choose;
         const prevChooseTxt = $chooseBtn.text().trim();
