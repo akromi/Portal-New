@@ -2013,3 +2013,14 @@ function initWetDatePolyfill(ids){
   }
 }
 // 
+
+// public helper to re-run all validators for a field now
+window.revalidate = function revalidate(id, type, _opts) {
+  try {
+    updatesOnChange({ id: String(id), type: String(type || '') }, { isTrusted: true });
+  } catch (e) {
+    console.warn('revalidate failed for', id, e);
+  }
+};
+
+
