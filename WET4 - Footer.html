@@ -1,0 +1,54 @@
+<!-- end main content -->
+{% include 'snippet' snippet_name:'WET4 - preFooter' %}
+{% include 'WET4 - Session Timeout' %}
+</main>
+
+<!-- GCWeb appFooter -->
+<div id="def-footer"></div>
+<script>
+  var defFooter = document.getElementById("def-footer");
+  defFooter.outerHTML = wet.builder.appFooter({
+    cdnEnv: "prod",
+    showFeatures: false
+  });
+</script>
+
+<!-- GCWeb layout scripts -->
+<!-- script>
+  document.write(wet.builder.refFooter({
+    cdnEnv: "prod",
+    isApplication: {{ settings['WET4 - IsApplication'] }}
+  }));
+</script -->
+<script>
+  const isApplication = ("{{ settings['WET4 - IsApplication'] | default: 'false' }}").toLowerCase() === 'true';
+  document.write(wet.builder.refFooter({
+    cdnEnv: "prod",
+    isApplication: isApplication
+  }));
+</script>
+
+<!-- Optional Bootstrap (v3 only if you're using WET v4 GCWeb) -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+<!-- Re-init WET and Diagnostics -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (typeof wb !== "undefined" && wb.init) {
+      wb.init(document);
+    }
+
+    // Final diagnostics based on global jQuery
+    console.group("[DIAG] GCWeb WET4 / CDTS Diagnostics");
+    console.log("[DIAG] global jQuery version:", typeof jQuery !== "undefined" ? jQuery.fn.jquery : "NOT FOUND");
+    console.log("[DIAG] jQuery Validate loaded:", typeof jQuery !== "undefined" && typeof jQuery.fn.validate !== "undefined");
+    console.log("[DIAG] Additional Methods present:", typeof jQuery !== "undefined" && jQuery.validator && jQuery.validator.methods && typeof jQuery.validator.methods.min !== "undefined");
+    console.log("[DIAG] WET-BOEW core loaded:", typeof wb !== "undefined" && typeof wb.init === "function");
+    //console.log("[DIAG] Bootstrap 3 modal available:", typeof jQuery !== "undefined" && typeof jQuery.fn.modal !== "undefined");
+    console.log("[DIAG] Bootstrap 3 modal on global jQuery:", !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.modal));
+    console.log("[DIAG] Bootstrap 5 modal class available:", typeof bootstrap !== "undefined" && typeof bootstrap.Modal !== "undefined");
+    console.log("[DIAG] GCWeb CDTS layout engine (wet.builder) available:", typeof wet !== "undefined" && typeof wet.builder !== "undefined");
+    console.log("[DIAG] GCWeb wet-lang script loaded:", typeof wet !== "undefined");
+    console.groupEnd();
+  });
+</script>
