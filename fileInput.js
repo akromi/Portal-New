@@ -1,5 +1,5 @@
- 
- 
+  
+  
 // =======================
 // Accessibility helpers (structural only — no UX/labels/handlers)
 // =======================
@@ -130,112 +130,63 @@ function sanitizeFileButtons() {
     return label.closest('.clearfix.cell, td.cell, .form-control-cell, td, .cell');
   }
 
-  // // Hide ALL stock inline error nodes inside the file cell
-  // function hideAllInlineStockMessages(baseId){
-  //   const cell = findCell(baseId);
-  //   if (!cell) { DBG('No cell found for', baseId); return; }
+  // Hide ALL stock inline error nodes inside the file cell
+  function hideAllInlineStockMessages(baseId){
+    const cell = findCell(baseId);
+    if (!cell) { DBG('No cell found for', baseId); return; }
 
-  //   // 1) Hide every .error_message block regardless of text
-  //   const blocks = cell.querySelectorAll('.error_message');
-  //   if (blocks.length) {
-  //     blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
-  //     LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
-  //   } else {
-  //     DBG('No .error_message blocks for', baseId);
-  //   }
+    // 1) Hide every .error_message block regardless of text
+    const blocks = cell.querySelectorAll('.error_message');
+    if (blocks.length) {
+      blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
+      LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
+    } else {
+      DBG('No .error_message blocks for', baseId);
+    }
 
-  //   // 2) Hide stock <span id="<base>_err"> if present
-  //   const stock = document.getElementById(baseId + '_err');
-  //   if (stock) { stock.style.display = 'none'; DBG('Hid stock inline span:', baseId + '_err'); }
-  // }
-
-  // // MutationObserver: keep hiding anything new that appears in the cell
-  // const observers = new Map();
-  // function ensureObserver(baseId){
-  //   const cell = findCell(baseId);
-  //   if (!cell || observers.has(baseId)) return;
-
-  //   const obs = new MutationObserver((mutations)=>{
-  //     let changed = false;
-  //     for (const m of mutations) {
-  //       if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
-  //         // If any new error nodes appear, squash them
-  //         const blocks = cell.querySelectorAll('.error_message');
-  //         blocks.forEach(b => {
-  //           if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
-  //         });
-  //         const stock = document.getElementById(baseId + '_err');
-  //         if (stock && stock.style.display !== 'none') { stock.style.display = 'none'; changed = true; }
-  //       }
-  //     }
-  //     if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
-  //   });
-
-  //   obs.observe(cell, { childList: true, subtree: true });
-  //   observers.set(baseId, obs);
-  //   DBG('Observer attached for', baseId);
-  // }
-
-
- 
-
-// Hide ALL stock inline error nodes inside the file cell
-function hideAllInlineStockMessages(baseId){
-  const cell = findCell(baseId);
-  if (!cell) { DBG('No cell found for', baseId); return; }
-
-  // 1) Hide every .error_message block regardless of text
-  const blocks = cell.querySelectorAll('.error_message');
-  if (blocks.length) {
-    blocks.forEach(b => { b.style.display = 'none'; b.setAttribute('data-suppressed','1'); });
-    LOG('Suppressed', blocks.length, '.error_message block(s) for', baseId);
-  } else {
-    DBG('No .error_message blocks for', baseId);
+    // 2) Hide stock <span id="<base>_err"> ONLY if it is NOT under the label
+    const label = document.getElementById(baseId + '_label');
+    const stock = document.getElementById(baseId + '_err');
+    const isUnderLabel = !!(label && stock && label.contains(stock));
+    if (stock && !isUnderLabel) {
+      stock.style.display = 'none';
+      DBG('Hid stock inline span outside label:', baseId + '_err');
+    }
   }
 
-  // 2) Hide stock <span id="<base>_err"> ONLY if it is NOT under the label
-  const label = document.getElementById(baseId + '_label');
-  const stock = document.getElementById(baseId + '_err');
-  const isUnderLabel = !!(label && stock && label.contains(stock));
-  if (stock && !isUnderLabel) {
-    stock.style.display = 'none';
-    DBG('Hid stock inline span outside label:', baseId + '_err');
-  }
-}
+  // MutationObserver: keep hiding anything new that appears in the cell
+  const observers = new Map();
+  function ensureObserver(baseId){
+    const cell = findCell(baseId);
+    if (!cell || observers.has(baseId)) return;
 
-// MutationObserver: keep hiding anything new that appears in the cell
-const observers = new Map();
-function ensureObserver(baseId){
-  const cell = findCell(baseId);
-  if (!cell || observers.has(baseId)) return;
+    const obs = new MutationObserver((mutations)=>{
+      let changed = false;
+      for (const m of mutations) {
+        if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
+          // If any new error nodes appear, squash them
+          const blocks = cell.querySelectorAll('.error_message');
+          blocks.forEach(b => {
+            if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
+          });
 
-  const obs = new MutationObserver((mutations)=>{
-    let changed = false;
-    for (const m of mutations) {
-      if (m.type === 'childList' || m.type === 'subtree' || m.addedNodes?.length) {
-        // If any new error nodes appear, squash them
-        const blocks = cell.querySelectorAll('.error_message');
-        blocks.forEach(b => {
-          if (b.style.display !== 'none') { b.style.display = 'none'; changed = true; }
-        });
-
-        // Only hide <base>_err if it's not under the label (our custom inline lives under the label)
-        const label = document.getElementById(baseId + '_label');
-        const stock = document.getElementById(baseId + '_err');
-        const isUnderLabel = !!(label && stock && label.contains(stock));
-        if (stock && !isUnderLabel && stock.style.display !== 'none') {
-          stock.style.display = 'none';
-          changed = true;
+          // Only hide <base>_err if it's not under the label (our custom inline lives under the label)
+          const label = document.getElementById(baseId + '_label');
+          const stock = document.getElementById(baseId + '_err');
+          const isUnderLabel = !!(label && stock && label.contains(stock));
+          if (stock && !isUnderLabel && stock.style.display !== 'none') {
+            stock.style.display = 'none';
+            changed = true;
+          }
         }
       }
-    }
-    if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
-  });
+      if (changed) LOG('MutationObserver: re-suppressed stock messages for', baseId);
+    });
 
-  obs.observe(cell, { childList: true, subtree: true });
-  observers.set(baseId, obs);
-  DBG('Observer attached for', baseId);
-}
+    obs.observe(cell, { childList: true, subtree: true });
+    observers.set(baseId, obs);
+    DBG('Observer attached for', baseId);
+  }
 
   // Re-hide the inline blocks after any change on the visible file input
   function wireChangeHide(baseId){
@@ -260,7 +211,7 @@ function ensureObserver(baseId){
     if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
       try {
         Sys.WebForms.PageRequestManager.getInstance().add_endRequest(function(){
-          LOG('Partial postback detected; re-suppressing for', baseIds);
+          LOG('Partial postback detected; re-suppressed for', baseIds);
           (baseIds||[]).forEach(id=>{
             disableRequiredHidden(id);
             hideAllInlineStockMessages(id);
@@ -331,6 +282,18 @@ function fileI18n() {
     return { choose: 'Choose file', change: 'Change file', delete: 'Delete', none: 'No file selected' };
   }
 
+  // Helpers for Option B precedence
+  function _readMaxBytesFrom($input) {
+    const raw = $input.attr('data-max-bytes');
+    if (raw && !isNaN(raw)) return parseInt(raw, 10);
+    if (typeof window.DEFAULT_MAX_FILE_BYTES === 'number') return window.DEFAULT_MAX_FILE_BYTES;
+    return 4 * 1024 * 1024; // default 4 MiB
+  }
+  function _readAllowedExtFrom($input) {
+    const raw = $input.attr('data-allowed-ext') || '';
+    return raw ? raw.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean) : ['pdf','jpg','png','gif'];
+  }
+
   // Public API (attach on window)
   window.relabelAllFileUploadControls = function relabelAllFileUploadControls() {
     const t0 = performance.now();
@@ -379,7 +342,6 @@ function fileI18n() {
           const cur = $chooseBtn.attr('aria-labelledby');
           if (cur && !document.getElementById(cur)) $chooseBtn.removeAttr('aria-labelledby');
         }
-
 
 
         // 4) Always keep aria-controls in sync with the real input
@@ -434,47 +396,112 @@ function fileI18n() {
           const h0 = performance.now();
           const TT = _i18n();
           const file = this.files && this.files[0];
+          const idAttr = $input.attr('id') || '';
+          const baseId = idAttr.replace(/_input_file$/, '');
           logger.info('block[%d]: onChange fired; hasFile=%s', idx, !!file);
 
-          (function addZeroByteBlock() {
+          // 0) One-shot revalidate guard (prevents loops on our synthetic revalidate)
+if ($input.attr('data-revalidate-once') === '1') {
+  $input.removeAttr('data-revalidate-once');
+  // Do NOT schedule any more changes here. Let other listeners (validators) run.
+  logger.debug('block[%d]: consumed data-revalidate-once; skip re-trigger logic', idx);
+  // Optional: skip our own relabel body to avoid extra DOM churn
+  // return;
+}
+          // --- precedence markers for file validators ---
+         if (file) {
+  // Zero-byte
+  if (file.size === 0) {
+    $input.attr('data-zero-byte-pick','1');
 
-
-  //   BEGIN zero-byte handling
-  //   If a 0-byte file is selected, reset UI, flag invalid, and show an inline error
-  if (file && file.size === 0) {
-    // Clear native selection
+    // Reset UI
     try { this.value = ''; } catch (_) {}
     $input.val('');
-
-    // Reset UI to empty state
     if ($hiddenSpan.length) $hiddenSpan.text('');
     if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
     if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
     if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
     if ($delBtn.length) $delBtn.hide();
+    $block.removeAttr('data-has-server-file');
+    if ($block.removeData) $block.removeData('has-server-file');
+    $input.attr('aria-invalid','true');
 
-    // Remove any server-file marker
-    $block.removeAttr('data-has-server-file').removeData('has-server-file');
-
-    // a11y
-    $input.attr('aria-invalid', 'true');
-
-    // Bilingual inline error under label
-    const isFr = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr');
-    const msg  = isFr ? 'Le fichier sélectionné est vide.' : 'The selected file is empty.';
+    // Inline error (preempt "Required")
+    const msg = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr')
+      ? 'Le fichier sélectionné est vide.' : 'The selected file is empty.';
     if (baseId) setInlineErrorForFile(baseId, msg);
 
-    logger.warn('block[%d]: zero-byte file rejected; UI reset and inline error shown', idx);
-    return; // Important: stop normal relabel branch
+    // One-shot revalidate: mark and re-run jQuery handlers only (no native onchange)
+    $input.attr('data-revalidate-once','1');
+    Promise.resolve().then(() => { $input.triggerHandler('change'); });
+    logger.warn('block[%d]: zero-byte flagged; UI reset; revalidate queued (triggerHandler)', idx);
+    return;
   }
-  //   END zero-byte handling
 
-  //   When a valid file is picked, clear any prior inline zero-byte error
-  if (file && file.size > 0 && baseId) clearInlineErrorForFile(baseId);
+  // Oversize
+  const rawMax = $input.attr('data-max-bytes');
+  const maxBytes =
+    (rawMax && !isNaN(rawMax)) ? parseInt(rawMax, 10)
+    : (typeof window.DEFAULT_MAX_FILE_BYTES === 'number' ? window.DEFAULT_MAX_FILE_BYTES
+      : 4 * 1024 * 1024);
+  if (file.size > maxBytes) {
+    $input.attr('data-oversize-pick','1');
 
-  //   ...then keep the existing logic that sets filename, Change/Delete, etc.
-  // });
-})();
+    try { this.value = ''; } catch (_) {}
+    $input.val('');
+    if ($hiddenSpan.length) $hiddenSpan.text('');
+    if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
+    if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
+    if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
+    if ($delBtn.length) $delBtn.hide();
+    $block.removeAttr('data-has-server-file');
+    if ($block.removeData) $block.removeData('has-server-file');
+    $input.attr('aria-invalid','true');
+
+    const mb = (maxBytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '');
+    const msg = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr')
+      ? `Le fichier sélectionné est trop volumineux. Taille maximale : ${mb} Mo.`
+      : `The selected file is too large. Maximum allowed is ${mb} MB.`;
+    if (baseId) setInlineErrorForFile(baseId, msg);
+
+    $input.attr('data-revalidate-once','1');
+    Promise.resolve().then(() => { $input.triggerHandler('change'); });
+    logger.warn('block[%d]: oversize flagged; UI reset; revalidate queued (triggerHandler)', idx);
+    return;
+  }
+
+  // Bad type
+  const allowedStr = $input.attr('data-allowed-ext') || '';
+  const allowed = allowedStr ? allowedStr.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean) : ['pdf','jpg','png','gif'];
+  const dot = String(file.name || '').lastIndexOf('.');
+  const ext = dot > 0 ? String(file.name).slice(dot + 1).toLowerCase() : '';
+  const okType = !!ext && allowed.indexOf(ext) !== -1;
+  if (!okType) {
+    $input.attr('data-badtype-pick','1');
+
+    try { this.value = ''; } catch (_) {}
+    $input.val('');
+    if ($hiddenSpan.length) $hiddenSpan.text('');
+    if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
+    if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
+    if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
+    if ($delBtn.length) $delBtn.hide();
+    $block.removeAttr('data-has-server-file');
+    if ($block.removeData) $block.removeData('has-server-file');
+    $input.attr('aria-invalid','true');
+
+    const list = allowed.join(', ');
+    const msg = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr')
+      ? `Le type de fichier sélectionné n'est pas autorisé. Types permis : ${list}.`
+      : `The selected file type is not allowed. Allowed types: ${list}.`;
+    if (baseId) setInlineErrorForFile(baseId, msg);
+
+    $input.attr('data-revalidate-once','1');
+    Promise.resolve().then(() => { $input.triggerHandler('change'); });
+    logger.warn('block[%d]: bad-type flagged; UI reset; revalidate queued (triggerHandler)', idx);
+    return;
+  }
+}
 
           if (file) {
 
@@ -1123,6 +1150,7 @@ jQuery(function ($) {
   }
 });
 
+// Minimal helpers to render/clear inline errors when validations.js helpers aren’t present
 function setInlineErrorForFile(baseId, messageHtml) {
   // Prefer shared helper from validations.js if available
   if (typeof window.updateLabelErrorMessage === 'function') {
