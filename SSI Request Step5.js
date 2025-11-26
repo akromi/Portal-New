@@ -11,6 +11,13 @@ window.addEventListener("load", (e) => {
     $("#ethi_submittimeutc").hide();
     $("#ethi_submittimeutc").val(formatDateToYYYYMMDD12Hour(new Date()));
     $("#wb-lng").attr("class","text-right");
+
+    // Read-only summary: strip required class to prevent visual asterisks
+    $('.crmEntityFormView .table-info.required').removeClass('required');
+    // Also hide any lingering validator star containers
+    $('.crmEntityFormView .validators').hide();
+    // Prevent SR from announcing 'required' on read-only summary fields
+    $('.crmEntityFormView [aria-required="true"]').removeAttr('aria-required');
     //$("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
     $('#wb-sm').remove();
     $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
