@@ -79,6 +79,32 @@ function validatePhoneNumberFormat(source) {
     return phoneNumberRegex.test(phoneNumber);
 }
 
+// Validates a phone number - returns true if valid, false otherwise
+function validatePhoneNumberFormat2(source) {
+    var phoneNumber = $('#' + source.controltovalidate).val();
+    if (phoneNumber === null || phoneNumber.length === 0) {
+        return true;
+    }
+    
+    // Trim whitespace
+    phoneNumber = phoneNumber.trim();
+    
+    // Better UX: Allow partial inputs during typing (less than 10 digits)
+    // Only validate format when we have enough characters
+    const digitsOnly = phoneNumber.replace(/\D/g, '');
+    
+    // If we have fewer than 10 digits, it's incomplete but not necessarily wrong yet
+    // Return true to avoid premature error messages while user is typing
+    if (digitsOnly.length < 10) {
+        return true;
+    }
+    
+    // For 10+ digits, validate the full format
+    // Accepts: +1234567890, 123-456-7890, (123) 456-7890, etc.
+    const phoneNumberRegex = /^(?:[\+\d\s()-]*\d){10,}[\d\s()-]*$/;
+    return phoneNumberRegex.test(phoneNumber);
+}
+
 // Validates a date - returns true if valid, false otherwise
 // function validateDateFormat(source) {
 //     var raw =  $('#' + source.controltovalidate).val();
@@ -211,47 +237,14 @@ function validateBusinessNumber(source) {
   return bnMod10(trimmed);
 }
 
-// //Mod 11 Canadian Business Number Validator (Recommended by CRA)
-// function validateCanadianBusinessNumber(fieldId) {
-//   try {
-//     // Get the field value
-//     const field = document.getElementById(fieldId);
-//     if (!field) return false;
-    
-//     const value = field.value || '';
-    
-//     // Clean the input - remove all non-digits
-//     const cleanValue = value.replace(/\D/g, '');
-    
-//     // Empty values are valid (let required validators handle this)
-//     if (cleanValue === '') return true;
-    
-//     // Must be exactly 9 digits
-//     if (cleanValue.length !== 9) return false;
-    
-//     // Convert to array of numbers
-//     const digits = cleanValue.split('').map(d => parseInt(d, 10));
-    
-//     // Weights for positions 1-8
-//     const weights = [1, 3, 5, 7, 9, 11, 13, 15];
-    
-//     // Calculate weighted sum
-//     let sum = 0;
-//     for (let i = 0; i < 8; i++) {
-//       sum += digits[i] * weights[i];
-//     }
-    
-//     // Calculate check digit
-//     const remainder = sum % 11;
-//     const expectedCheckDigit = remainder < 2 ? remainder : 11 - remainder;
-    
-//     // Compare with actual 9th digit
-//     return digits[8] === expectedCheckDigit;
-    
-//   } catch (error) {
-//     return false;
-//   }
-// }
+// 
+function validatePhoneDigitsCount(source) {
+  var raw = $('#' + source.controltovalidate).val() || "";
+  // Count digits only
+  var digits = raw.replace(/\D/g, "");
+  if (digits.length === 0) return true; //the required validator will take over
+  return digits.length >= 10 && digits.length <= 15;
+}
 
 // Validates a phone extension - returns true if valid, false otherwise
 function validatePhoneExtension(source) {
@@ -293,176 +286,21 @@ function validatePositiveNumberOnly(source) {
    return rgxNumberOnly.test(numberOnly);
 }
 
-// // Validates if a file is selected - returns true if valid, false otherwise
-// function validateFileSelected(source) {
-//   const $inp = $("#" + source.controltovalidate + "_input_file");
-//   // Works for native file inputs and PP’s value fallback
-//   const hasFiles = $inp[0] && $inp[0].files && $inp[0].files.length >= 0;
-//   const hasValue = !!$inp.val();
-//   return hasFiles || hasValue;
-// }
-
-// // Small shared helper — same targeting pattern you use elsewhere
-// function _fileInputFor(src){
-//   var baseId = src && src.controltovalidate ? src.controltovalidate : '';
-//   return document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
-// }
-
-// /**
-//  * Validate that the picked file is NOT zero bytes.
-//  * Returns:
-//  *   true  -> no file picked OR size > 0
-//  *   false -> file picked and size === 0
-//  */
-// function validateFileNotZero(src){
-//   var fin = _fileInputFor(src);
-//   if (!fin) return true;                         // can't validate → don't block
-//   var f = fin.files && fin.files[0];
-//   if (!f) return true;                           // no new file → let "required" handle presence
-//   return f.size !== 0;                           // only fail on exactly zero
-// }
-
-// /**
-//  * Validate that the picked file does NOT exceed the max size.
-//  * Max resolution order:
-//  *   1) data-max-bytes on the input (string int)
-//  *   2) window.DEFAULT_MAX_FILE_BYTES (number)
-//  *   3) 4 MiB default
-//  *
-//  * Returns:
-//  *   true  -> no file picked OR size <= max
-//  *   false -> file picked and size > max
-//  */
-// function validateFileMaxSize(src){
-//   var fin = _fileInputFor(src);
-//   if (!fin) return true;
-//   var f = fin.files && fin.files[0];
-//   if (!f) return true;
-
-//   var fromAttr = fin.getAttribute('data-max-bytes');
-//   var maxBytes =
-//     (fromAttr && !isNaN(fromAttr)) ? parseInt(fromAttr, 10) :
-//     (typeof window.DEFAULT_MAX_FILE_BYTES === 'number' ? window.DEFAULT_MAX_FILE_BYTES :
-//      4 * 1024 * 1024); // 4 MiB
-
-//   return f.size <= maxBytes;
-// }
-
-
-// // Accept only: PDF, JPG, PNG, GIF
-// function validateFileType(source) {
-//   const allowed = new Set(['pdf', 'jpg', 'png', 'gif']); // hard-coded
-
-//   // Power Pages: try *_input_file first, then raw id
-//   let $inp = $('#' + source.controltovalidate + '_input_file');
-//   if (!$inp.length) $inp = $('#' + source.controltovalidate);
-
-//   const el = $inp.get(0);
-//   if (!el || !el.files || el.files.length === 0) return true; // nothing selected
-
-//   const file = el.files[0]; // only check the first file
-//   const name = String(file.name || '');
-//   const dot = name.lastIndexOf('.');
-//   if (dot <= 0) return false; // no extension or starts with '.'
-
-//   const ext = name.slice(dot + 1).toLowerCase();
-//   return allowed.has(ext);
-// }
-
-// Small shared helper — same targeting pattern you use elsewhere
-function _fileInputFor(src){
-  var baseId = src && src.controltovalidate ? src.controltovalidate : '';
+/** Resolve the real <input type=file> element for a validator source */
+function _resolveFileInput(source) {
+  const baseId = String(source.controltovalidate || '');
   return document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
 }
 
-// // Validates if a file is selected - returns true if valid, false otherwise
-// function validateFileSelected(source) {
-//   // Prefer the visible file input; fall back to base id
-//   var fin = _fileInputFor(source);
-//   if (!fin) {
-//     // If the control can't be located, fail closed for "required"
-//     // so we don't accidentally pass a required field silently.
-//     return false;
-//   }
+/** Read per-field max bytes from DOM (data-max-bytes) or fall back to default 4MB */
+function _resolveMaxBytesFor(inputEl) {
+  const DEFAULT_MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB
+  if (!inputEl) return DEFAULT_MAX_FILE_BYTES;
+  const raw = inputEl.getAttribute('data-max-bytes');
+  const n = raw ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_FILE_BYTES;
+}
 
-//   // Native file list (most reliable)
-//   if (fin.files && typeof fin.files.length === 'number') {
-//     return fin.files.length > 0;
-//   }
-
-//   // Fallback: value attribute (older browsers)
-//   var val = (fin.value || '').trim();
-//   return val.length > 0;
-// }
-
-// /**
-//  * Validate that the picked file is NOT zero bytes.
-//  * Returns:
-//  *   true  -> no file picked OR size > 0
-//  *   false -> file picked and size === 0
-//  */
-// function validateFileNotZero(src){
-//   var fin = _fileInputFor(src);
-//   if (!fin) return true; // can't validate → don't block
-//   var f = fin.files && fin.files[0];
-//   if (!f) return true;   // no new file → let "required" handle presence
-//   return f.size !== 0;   // only fail on exactly zero
-// }
-
-// /**
-//  * Validate that the picked file does NOT exceed the max size.
-//  * Max resolution order:
-//  *   1) data-max-bytes on the input (string int)
-//  *   2) window.DEFAULT_MAX_FILE_BYTES (number)
-//  *   3) 4 MiB default
-//  *
-//  * Returns:
-//  *   true  -> no file picked OR size <= max
-//  *   false -> file picked and size > max
-//  */
-// function validateFileMaxSize(src){
-//   var fin = _fileInputFor(src);
-//   if (!fin) return true;
-//   var f = fin.files && fin.files[0];
-//   if (!f) return true;
-
-//   var fromAttr = fin.getAttribute('data-max-bytes');
-//   var maxBytes =
-//     (fromAttr && !isNaN(fromAttr)) ? parseInt(fromAttr, 10) :
-//     (typeof window.DEFAULT_MAX_FILE_BYTES === 'number' ? window.DEFAULT_MAX_FILE_BYTES :
-//      4 * 1024 * 1024); // 4 MiB
-
-//   return f.size <= maxBytes;
-// }
-
-// // Accept file types based on data-allowed-ext attribute or default: PDF, JPG, PNG, GIF
-// function validateFileType(source) {
-//   // Power Pages: try *_input_file first, then raw id
-//   let $inp = $('#' + source.controltovalidate + '_input_file');
-//   if (!$inp.length) $inp = $('#' + source.controltovalidate);
-
-//   const el = $inp.get(0);
-//   if (!el || !el.files || el.files.length === 0) return true; // nothing selected → let "required" handle presence
-
-//   // Read allowed extensions from data-allowed-ext attribute, or use default
-//   const allowedExtStr = el.getAttribute('data-allowed-ext') || '';
-//   const allowedList = allowedExtStr
-//     ? allowedExtStr.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean)
-//     : ['pdf', 'jpg', 'png', 'gif']; // default set
-//   const allowed = new Set(allowedList);
-
-//   const file = el.files[0]; // only check the first file
-//   const name = String(file.name || '').trim();
-//   const dot = name.lastIndexOf('.');
-//   if (dot <= 0) return false; // no extension or starts with '.'
-
-//   const ext = name.slice(dot + 1).toLowerCase();
-//   return allowed.has(ext);
-// }
-
-/* === one-shot flags (add near other file helpers) ================= */
-
-// Add near your other small helpers (top of validators.js is fine)
 function _isPickFlag(fin, key) {
   try { return !!(fin && fin.getAttribute && fin.getAttribute(key) === '1'); }
   catch (_) { return false; }
@@ -472,59 +310,64 @@ function _clearPickFlag(fin, key) {
 }
 
 // Required — yield when any one-shot flag is set on this cycle
-function validateFileSelected(source) {
-  var fin = _fileInputFor(source);
-  if (!fin) return false; // fail-closed for required
+// function validateFileSelected(source) {
+//   var fin = _resolveFileInput(source);
+//   if (!fin) return false; // fail-closed for required
 
-  // If UI flagged this as a bad pick, skip Required for this cycle
-  if (_isPickFlag(fin, 'data-zero-byte-pick') ||
-      _isPickFlag(fin, 'data-oversize-pick') ||
-      _isPickFlag(fin, 'data-badtype-pick')) {
-    return true;
-  }
+//   // If UI flagged this as a bad pick, skip Required for this cycle
+//   if (_isPickFlag(fin, 'data-zero-byte-pick') ||
+//       _isPickFlag(fin, 'data-oversize-pick') ||
+//       _isPickFlag(fin, 'data-badtype-pick')) {
+//     return true;
+//   }
 
-  // Normal presence check
-  if (fin.files && typeof fin.files.length === 'number') {
-    return fin.files.length > 0;
+//   // Normal presence check
+//   if (fin.files && typeof fin.files.length === 'number') {
+//     return fin.files.length > 0;
+//   }
+//   var val = (fin.value || '').trim();
+//   return val.length > 0;
+// }
+function validateFileSelected(file, fieldId, ctx) {
+  // If no local file, but bridge sees a server-side file, treat as valid
+  if (!file) {
+    try {
+      if (window.FileStockSuppression &&
+          typeof window.FileStockSuppression.hasExistingServerFile === 'function' &&
+          window.FileStockSuppression.hasExistingServerFile(fieldId)) {
+
+        if (window.console && console.debug) {
+          console.debug('[validators] validateFileSelected: server file detected for', fieldId);
+        }
+        return { valid: true };
+      }
+    } catch (e) {
+      if (window.console && console.debug) {
+        console.debug('[validators] validateFileSelected: error probing server file for', fieldId, e);
+      }
+      // fall through to normal logic
+    }
   }
-  var val = (fin.value || '').trim();
-  return val.length > 0;
+}
+/** Returns true unless a 0-byte file is picked (no message side-effects) */
+function validateFileSizeZeroByte(source) {
+  const el = _resolveFileInput(source);
+  const hasFiles = !!(el && el.files && el.files.length);
+  if (!hasFiles) return true;          // required-ness handled elsewhere
+  const f = el.files[0];
+  if (!f) return true;                 // defensive
+  return f.size > 0;                   // false => 0-byte
 }
 
-// Zero-byte — consume flag and fail
-function validateFileNotZero(src){
-  var fin = _fileInputFor(src);
-  if (!fin) return true;
-
-  if (_isPickFlag(fin, 'data-zero-byte-pick')) {
-    _clearPickFlag(fin, 'data-zero-byte-pick');
-    return false;
-  }
-
-  var f = fin.files && fin.files[0];
-  if (!f) return true;
-  return f.size !== 0;
-}
-
-// Max size — consume flag and fail
-function validateFileMaxSize(src){
-  var fin = _fileInputFor(src);
-  if (!fin) return true;
-
-  if (_isPickFlag(fin, 'data-oversize-pick')) {
-    _clearPickFlag(fin, 'data-oversize-pick');
-    return false;
-  }
-
-  var f = fin.files && fin.files[0];
-  if (!f) return true;
-
-  var fromAttr = fin.getAttribute('data-max-bytes');
-  var maxBytes =
-    (fromAttr && !isNaN(fromAttr)) ? parseInt(fromAttr, 10) :
-    (typeof window.DEFAULT_MAX_FILE_BYTES === 'number' ? window.DEFAULT_MAX_FILE_BYTES :
-     4 * 1024 * 1024);
-  return f.size <= maxBytes;
+/** Returns true when size <= max (default 4MB or data-max-bytes) */
+function validateFileSizeMax(source) {
+  const el = _resolveFileInput(source);
+  const hasFiles = !!(el && el.files && el.files.length);
+  if (!hasFiles) return true;          // required-ness handled elsewhere
+  const f = el.files[0];
+  if (!f) return true;                 // defensive
+  const maxBytes = _resolveMaxBytesFor(el);
+  return f.size <= maxBytes;           // false => oversize
 }
 
 // Type — consume flag and fail
