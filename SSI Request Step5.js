@@ -13,6 +13,7 @@ window.addEventListener("load", (e) => {
     $("#wb-lng").attr("class","text-right");
 
     // Read-only summary: strip required class to prevent visual asterisks
+    $('body').addClass('read-only-summary');
     $('.crmEntityFormView .table-info.required').removeClass('required');
     // Also hide any lingering validator star containers
     $('.crmEntityFormView .validators').hide();
@@ -73,6 +74,7 @@ window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or 
   else { $("#ethi_otherregistryflag").parent().parent().hide() };
 
 // Make the “ethi_canadiancoastguard” radios tabbable but read-only
+$('#ethi_submitterismedicalcontact').addClass('wet-patched-radio');
 ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
 ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial postbacks
 
@@ -82,12 +84,13 @@ ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial po
     };
 
 // Make the “Canadian coast guard” radios tabbable but read-only
-ReadOnlyRadioGroup.make({ 
-  container: '#ethi_canadiancoastguard', 
+$('#ethi_canadiancoastguard').addClass('wet-patched-radio');
+ReadOnlyRadioGroup.make({
+  container: '#ethi_canadiancoastguard',
   label: '#ethi_canadiancoastguard_label' // optional; helper can infer it
 });
-ReadOnlyRadioGroup.reapply({ 
-  container: '#ethi_canadiancoastguard', 
+ReadOnlyRadioGroup.reapply({
+  container: '#ethi_canadiancoastguard',
   label: '#ethi_canadiancoastguard_label'
 });
 BindRadioGroupLabel.make({

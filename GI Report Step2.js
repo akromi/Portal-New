@@ -22,7 +22,8 @@ window.addEventListener("load", (e) => {
   $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
   $('#wb-sm').remove();
   $("input").removeAttr("placeholder");
-  //$('body').classList.add('read-only-summary');
+  // Flag page as a read-only summary so radios render in grey
+  $('body').addClass('read-only-summary');
   //$('#wb-tphp a.wb-sl')?.focus(); // should focus the skip link
 
   $('body').attr('tabindex', '-1').focus();
@@ -54,6 +55,7 @@ TabbableReadOnly.make('#ethi_nextport_name', { ariaDisabled: true, label: '#ethi
 TabbableReadOnly.reapply('#ethi_nextport_name', { ariaDisabled: true, label: '#ethi_nextport_label' });
 
 // Make the “Submitter is medical contact?” radios tabbable but read-only
+$('#ethi_submitterismedicalcontact').addClass('wet-patched-radio');
 ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
 ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial postbacks
 BindRadioGroupLabel.make({
