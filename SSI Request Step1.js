@@ -12,6 +12,11 @@ window.addEventListener("load", (e) => {
     //$("#wb-lng").attr("class","text-right");
    // $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
     $('#wb-sm').remove();
+
+      $('body').attr('tabindex', '-1').focus();
+  setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
+
     $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
 
   var organizationEmailLabel = $("#ethi_organizationemail_label").text().trim();
@@ -48,7 +53,7 @@ window.addEventListener("load", (e) => {
         required: true,
         validators: [
          {
-           validator: validatePhoneNumberFormat,
+           validator: validatePhoneDigitsCount,
            message_en: "{{snippets['ethi-officenumber']}}",
            message_fr: "{{snippets['ethi-officenumber']}}"
          }      
@@ -74,7 +79,7 @@ window.addEventListener("load", (e) => {
         required: false,
         validators: [
          {
-           validator: validatePhoneNumberFormat,
+           validator: validatePhoneDigitsCount,
            message_en: "{{snippets['ethi-cellnumber']}}",
            message_fr: "{{snippets['ethi-cellnumber']}}"
          }      
@@ -96,6 +101,9 @@ window.addEventListener("load", (e) => {
     ];
   
     addValidators(fields); 
-    
+   
+    // Enforce input rules + strip punctuation on blur
+    enableStrictPhoneInput(['ethi_organizationphone']); 
+    enableStrictPhoneInput(['ethi_secondaryphone']); 
    return true;
  });
