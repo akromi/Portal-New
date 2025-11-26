@@ -170,8 +170,9 @@ function globalEvaluationFunction() {
     $ul.empty();
 
     if (items.length === 0) {
-      // No errors → hide the summary and clear heading
+      // No errors → hide the summary and clear heading/accessibility text
       $sum.find('> h2').text('');
+      $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').text('');
       $sum.hide();
       try { focused.focus(); } catch (e) { }
       return;
@@ -188,12 +189,21 @@ function globalEvaluationFunction() {
     });
 
     var n = items.length;
-    $sum.find('> h2').text(
-      currentLang === 'en'
-        ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-        : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
-          (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-    );
+    var headingText = (currentLang === 'en'
+      ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+      : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+        (n > 1 ? "s ont été trouvées." : " a été trouvée."));
+
+    // Keep the visible heading and screen-reader-only text in sync so AT users
+    // hear the same message when the summary first appears and when they revisit it.
+    $sum.find('> h2').text(headingText);
+    var $live = $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').first();
+    if ($live.length === 0) {
+      $live = $('<p class="wb-inv" aria-live="polite" role="alert"></p>').prependTo($sum);
+    }
+    if (!$live.attr('aria-live')) $live.attr('aria-live', 'polite');
+    if (!$live.attr('role')) $live.attr('role', 'alert');
+    $live.text(headingText);
 
     $sum.find('a').css('text-decoration', 'underline');
     $sum.show();
