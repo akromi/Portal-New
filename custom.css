@@ -97,6 +97,61 @@ textarea:focus {
   outline: 0;
 }
 
+/* ---- Global button focus rings (keyboard only) ----------------------- */
+/* Reuse your theme vars if present; otherwise fall back to GCWeb-ish blue */
+:root {
+  --wet-focus-ring: #1a5a96;
+  --wet-focus-bg: rgba(26, 90, 150, .18);
+}
+
+/* Core targets: native buttons, Bootstrap .btn, input buttons, ARIA buttons */
+button:focus-visible,
+.btn:focus-visible,
+input[type="button"]:focus-visible,
+input[type="submit"]:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid var(--wet-focus-ring, #1a5a96);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--wet-focus-bg, rgba(26, 90, 150, .18));
+  border-radius: .5rem; /* matches your rounded style */
+}
+
+/* Don’t show our ring on disabled controls */
+button:disabled,
+.btn:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled {
+  outline: none;
+  box-shadow: none;
+}
+
+/* If Bootstrap added a generic :focus shadow, prefer keyboard-only ring */
+.btn:focus:not(:focus-visible) {
+  box-shadow: none; /* keep clicks clean */
+}
+
+/* Fallback for older browsers that lack :focus-visible */
+@supports not selector(:focus-visible) {
+  button:focus,
+  .btn:focus,
+  input[type="button"]:focus,
+  input[type="submit"]:focus,
+  [role="button"]:focus {
+    outline: 3px solid var(--wet-focus-ring, #1a5a96);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px var(--wet-focus-bg, rgba(26, 90, 150, .18));
+  }
+}
+
+/* High-contrast / forced-colors support */
+@media (forced-colors: active) {
+  button:focus, .btn:focus, input[type="button"]:focus, input[type="submit"]:focus, [role="button"]:focus {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
 /* == 6) Input Groups (Inside-Icon layout for date/time) ====================== */
 
 .input-group.pp-inside {
@@ -306,3 +361,60 @@ textarea.form-control {
   width: 100%;
   display: block;
 }
+
+/* Very long filenames: add ellipsis to the filename container */
+.file-name-container div { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Keep underlines + ring on non-button links (esp. summary links) */
+#ValidationSummaryEntityFormView a {
+  text-decoration: underline;
+}
+
+/* To support Chrome 54+, Chrome Android 54+, Edge 79+  */
+html {
+  text-size-adjust: 100%; 
+}
+
+body {
+  text-size-adjust: 100%; 
+}
+
+@media (min-width: 768px) {
+  .dl-horizontal.dt-max {
+    grid-template-columns: minmax(min-content, min-content) auto;
+  }
+}
+
+th {
+  text-align: -webkit-match-parent; 
+  text-align: match-parent; 
+}
+
+.crmEntityFormView select.form-control.readonly,
+.form-readonly select.form-control {
+    -webkit-user-select: none;
+     user-select: none; 
+}
+
+.radio-toolbar label {
+     -webkit-user-select: none;
+     user-select: none; 
+}
+
+/* Read-only-but-focusable selects (chevron removed) */
+.crmEntityFormView .control select.form-select[data-ro-select="1"] {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  --bs-form-select-bg-img: none !important; /* BS 5.2+ token */
+  background-image: none !important;        /* explicit fallback */
+  padding-right: .75rem !important;         /* remove chevron gutter */
+  opacity: 1;
+  color: inherit;
+  background-color: transparent;
+  cursor: default;
+}
+
+/* Old IE/Edge fallback */
+select[data-ro-select="1"]::-ms-expand { display: none; }
+
