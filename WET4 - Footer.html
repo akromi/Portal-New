@@ -1,3 +1,4 @@
+<!-- WET4 - Footer.html -->
 <!-- end main content -->
 {% include 'snippet' snippet_name:'WET4 - preFooter' %}
 {% include 'WET4 - Session Timeout' %}
@@ -13,42 +14,92 @@
   });
 </script>
 
-<!-- GCWeb layout scripts -->
-<!-- script>
-  document.write(wet.builder.refFooter({
-    cdnEnv: "prod",
-    isApplication: {{ settings['WET4 - IsApplication'] }}
-  }));
-</script -->
+<!-- GCWeb layout scripts and refFooter injector (existing content kept) -->
 <script>
-  const isApplication = ("{{ settings['WET4 - IsApplication'] | default: 'false' }}").toLowerCase() === 'true';
-  document.write(wet.builder.refFooter({
-    cdnEnv: "prod",
-    isApplication: isApplication
-  }));
-</script>
+(function () {
+  function injectHTMLWithScripts(html, afterNode) {
+    var tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    var scripts = Array.from(tmp.querySelectorAll("script[src]"));
+    var inline  = Array.from(tmp.querySelectorAll("script:not([src])"));
+    var others  = Array.from(tmp.childNodes).filter(function(n){ return !(n.tagName && n.tagName.toLowerCase()==='script'); });
 
-<!-- Optional Bootstrap (v3 only if you're using WET v4 GCWeb) -->
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    var container = document.createElement("div");
+    others.forEach(function(n){ container.appendChild(n); });
+    if (afterNode && afterNode.parentNode) afterNode.parentNode.insertBefore(container, afterNode.nextSibling);
+    else document.body.appendChild(container);
 
-<!-- Re-init WET and Diagnostics -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    if (typeof wb !== "undefined" && wb.init) {
-      wb.init(document);
+    return scripts.reduce(function(p, sEl){
+      return p.then(function(){
+        return new Promise(function(res,rej){
+          var s=document.createElement('script');
+          s.src = sEl.getAttribute('src');
+          s.async=false; s.defer=false;
+          s.onload=res; s.onerror=rej;
+          document.body.appendChild(s);
+        });
+      });
+    }, Promise.resolve()).then(function(){
+      inline.forEach(function(s){ var i=document.createElement('script'); i.text = s.text; document.body.appendChild(i); });
+      return container;
+    });
+  }
+
+  var isApplication = ("{{ settings['WET4 - IsApplication'] | default: 'false' }}").toLowerCase() === 'true';
+
+  function ensureRefFooter() {
+    if (window.__refFooterLoaded) return;
+    try {
+      const html = wet.builder.refFooter({ cdnEnv: "prod", isApplication });
+      const anchor = document.getElementById("def-footer");
+      Promise.resolve(injectHTMLWithScripts(html, anchor)).then(function () {
+        window.__refFooterLoaded = true;
+        if (!window.__wbInitDone && typeof wb !== "undefined" && typeof wb.init === "function") {
+          wb.init(document);
+          window.__wbInitDone = true;
+        }
+        console.info("[WET] refFooter injected and scripts executed.");
+      });
+    } catch (e) {
+      console.error("refFooter injection failed:", e);
     }
+  }
 
-    // Final diagnostics based on global jQuery
-    console.group("[DIAG] GCWeb WET4 / CDTS Diagnostics");
-    console.log("[DIAG] global jQuery version:", typeof jQuery !== "undefined" ? jQuery.fn.jquery : "NOT FOUND");
-    console.log("[DIAG] jQuery Validate loaded:", typeof jQuery !== "undefined" && typeof jQuery.fn.validate !== "undefined");
-    console.log("[DIAG] Additional Methods present:", typeof jQuery !== "undefined" && jQuery.validator && jQuery.validator.methods && typeof jQuery.validator.methods.min !== "undefined");
-    console.log("[DIAG] WET-BOEW core loaded:", typeof wb !== "undefined" && typeof wb.init === "function");
-    //console.log("[DIAG] Bootstrap 3 modal available:", typeof jQuery !== "undefined" && typeof jQuery.fn.modal !== "undefined");
-    console.log("[DIAG] Bootstrap 3 modal on global jQuery:", !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.modal));
-    console.log("[DIAG] Bootstrap 5 modal class available:", typeof bootstrap !== "undefined" && typeof bootstrap.Modal !== "undefined");
-    console.log("[DIAG] GCWeb CDTS layout engine (wet.builder) available:", typeof wet !== "undefined" && typeof wet.builder !== "undefined");
-    console.log("[DIAG] GCWeb wet-lang script loaded:", typeof wet !== "undefined");
-    console.groupEnd();
-  });
+  if (typeof wet !== "undefined" && wet.builder && typeof wet.builder.refFooter === "function") {
+    ensureRefFooter();
+  } else {
+    const obs = new MutationObserver(function () {
+      if (typeof wet !== "undefined" && wet.builder && typeof wet.builder.refFooter === "function") {
+        ensureRefFooter();
+        obs.disconnect();
+      }
+    });
+    // Narrow the observer root to body instead of the whole document
+    obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    setTimeout(function(){ obs.disconnect(); }, 5000);
+  }
+})();
 </script>
+
+<script>
+  // Delay DIAG until after window 'load' so CDN plugins can settle
+  window.addEventListener('load', function () {
+    function hasValidate() {
+      try { return !!(window.jQuery && jQuery.validator && jQuery.validator.addMethod); } catch { return false; }
+    }
+    function hasAdditionalMethods() {
+      try { return !!(window.jQuery && jQuery.validator && jQuery.validator.methods && jQuery.validator.methods.min); } catch { return false; }
+    }
+    function hasWET() { return typeof wb !== 'undefined' && typeof wb.init === 'function'; }
+    function hasBS5() { return !!(window.bootstrap && bootstrap.Modal); }
+
+    console.group("[DIAG WET4 - Footer] GCWeb WET4 / CDTS Diagnostics");
+    console.log("[DIAG WET4 - Footer] global jQuery version:", (window.jQuery && jQuery.fn && jQuery.fn.jquery) || "(none)");
+    console.log("[DIAG WET4 - Footer] jQuery Validate loaded:", hasValidate());
+    console.log("[DIAG WET4 - Footer] Additional Methods present:", hasAdditionalMethods());
+    console.log("[DIAG WET4 - Footer] WET-BOEW core loaded:", hasWET());
+    console.log("[DIAG WET4 - Footer] Bootstrap 5 modal class available:", hasBS5());
+    console.groupEnd();
+  }, { once:true });
+</script>
+
