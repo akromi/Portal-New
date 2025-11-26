@@ -3,21 +3,21 @@ window.addEventListener("load", (e) => {
   debugger;
   document.title =   "{{snippets['ethi-ssi-step2']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
 
-  //const styleString = "width:100% ;font-size: 16px; line-height:35px; padding: 0 12px;";
-  //$(".form-control").attr('style', styleString);
-
   $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step2']}}" + "</h2>");
   $(".tab-title").css("padding-bottom", "30px");
- // $("input:not([type='radio']):not([type='button']):not([id='wb-srch-q'])").css({ "width": "550px" });
-  //$("select").css({ "width": "550px" })
+
   $("h2[class='tab-title']").hide();
   $("input").removeAttr("placeholder");
-  //$("#wb-lng").attr("class", "text-right");
-  //$("#wb-srch").attr("class", "col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
+
   $('#wb-sm').remove();
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
 
 
+  $('body').attr('tabindex', '-1').focus();
+  setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
+
+      
   $("select").each(function () {
     if (!$(this).parent().hasClass("select-icon")) {
       $(this).wrap('<div class="select-icon"></div>');
@@ -25,18 +25,7 @@ window.addEventListener("load", (e) => {
     }
   });
 
-  //Patch dropdowns to show the chevron.
-  // document.querySelectorAll('.crmEntityFormView .control select.form-control')
-  // .forEach(el => el.classList.add('select--bg-arrow'));
-
-
-  var curLang = $('html').attr('data-lang') || "en";
-
-  var lan = "{{ website.selected_language.code }}";
-  // let countries = $("select#ethi_invoicecountry option");
-  // getNameFromDropdown(lan, countries);
-  //let provinces = $("select#ethi_invoiceprovince option");
-  //getNameFromDropdown(lan, provinces);
+  var lang = "{{ website.selected_language.code }}" || "en";
 
   var isOrganizationNumberLabel = $("#ethi_isorganizationnumber_label").text().trim();
   var isReferenceNumberLabel = $("#ethi_isreferencenumber_label").text().trim();
@@ -46,7 +35,6 @@ window.addEventListener("load", (e) => {
   var invoiceProvinceStateLabel = $("#ethi_invoiceprovincestate_label").text().trim();
   var invoicePostalCodeZipCodeLabel = $("#ethi_invoicepostalcodezipcode_label").text().trim();
   var businessNumberLabel  = $("#ethi_businessnumber_label").text().trim();
-
 
   var fields = [
     {
@@ -66,7 +54,7 @@ window.addEventListener("load", (e) => {
         {
           validator: validateBusinessNumber,
           message_en: businessNumberLabel + " " + "{{snippets['ethi-businessnumber']}}",
-          message_fr: businessNumberLabel + " " + "{{snippets['ethi-businessnumber']}}"
+          message_fr: "Le champ " + businessNumberLabel + " " + "{{snippets['ethi-businessnumber']}}"
         }
       ]
     },
@@ -75,9 +63,13 @@ window.addEventListener("load", (e) => {
       type: 'lookup',
       length: 100,
       required: true,
-      validators: [validateRequired],
-      message_en: invoiceCountryLabel + " " + "{{snippets['ethi-requiredfield']}}",
-      message_fr: invoiceCountryLabel + " " + "{{snippets['ethi-requiredfield']}}"
+      validators: [
+        {
+          validator: validateRequired,
+          message_en: invoiceCountryLabel + " " + "{{snippets['ethi-requiredfield']}}",
+          message_fr: "Le champ " + invoiceCountryLabel + " " + "{{snippets['ethi-requiredfield']}}"
+        }
+      ]
     },
     {
       id: 'ethi_invoiceprovincestate',
@@ -88,9 +80,21 @@ window.addEventListener("load", (e) => {
         {
           validator: validateRequired,
           message_en: invoiceProvinceStateLabel + " " + "{{snippets['ethi-requiredfield']}}",
-          message_fr: invoiceProvinceStateLabel + " " + "{{snippets['ethi-requiredfield']}}"
+          message_fr: "Le champ " + invoiceProvinceStateLabel + " " + "{{snippets['ethi-requiredfield']}}"
         }
       ]
+    },
+    {
+     id: 'ethi_invoiceprovince',
+     type: 'lookup',           
+     required: true,           
+     validators: [
+      {
+        validator: validateRequired,
+        message_en: invoiceProvinceLabel + " " + "{{snippets['ethi-requiredfield']}}",
+        message_fr: "Le champ " + invoiceProvinceLabel + " " + "{{snippets['ethi-requiredfield']}}",
+      }
+     ]
     },
     {
       id: 'ethi_invoicecity',
@@ -116,38 +120,6 @@ window.addEventListener("load", (e) => {
       validators: [
       ]
     }
-    //,
-    // {
-    //   id: 'ethi_invoicepostalcode',
-    //   type: 'text',
-    //   length: 100,
-    //   required: true,
-    //   validators: [
-    //     {
-    //       validator: validateRequired,
-    //       message_en: invoicePostalCodeLabel + " " + "{{snippets['ethi-requiredfield']}}",
-    //       message_fr: invoicePostalCodeLabel + " " + "{{snippets['ethi-requiredfield']}}"
-    //     },
-    //     {
-    //       validator: validateCanadianPostal,
-    //       message_en: invoicePostalCodeLabel + " " + "{{snippets['ethi-postalcode']}}",
-    //       message_fr: invoicePostalCodeLabel + " " + "{{snippets['ethi-postalcode']}}"
-    //     }
-    //   ]
-    // },
-    // {
-    //   id: 'ethi_invoicepostalcodezipcode',
-    //   type: 'text',
-    //   length: 20,
-    //   required: true,
-    //   validators: [
-    //     {
-    //       validator: validateRequired,
-    //       message_en: invoicePostalCodeZipCodeLabel + " " + "{{snippets['ethi-requiredfield']}}",
-    //       message_fr: invoicePostalCodeZipCodeLabel + " " + "{{snippets['ethi-requiredfield']}}"
-    //     }
-    //   ]
-    // }
   ];
   addValidators(fields);
 
@@ -159,21 +131,124 @@ WET4.patchRadioGroup('ethi_canadiancoastguard');
     checkCoastGuard();
   });
 
-  LoadInvoiceCountry();
+  getActiveInvoiceCountry(lang);
 
-  $("#ethi_invoicecountry").change(function () {
+  getActiveInvoiceProvinces(lang);
+
+  //showInvoiceProvince();
+
+  const CANADA_GUID = "f23dc860-6f39-ef11-a317-000d3af44283";  // keep in one place
+  const $country = $("#ethi_invoicecountry");
+ 
+  // Orchestrator: clear old validators, choose path, and revalidate if active
+  function applyInvoiceProvinceRules() {
+    // Always clear stale rules first (both paths)
     removeValidators("ethi_invoiceprovincestate");
     removeValidators("ethi_invoicepostalcodezipcode");
     removeValidators("ethi_invoiceprovince");
     removeValidators("ethi_invoicepostalcode");
-    var value = $(this).val();
-    if (value == "f23dc860-6f39-ef11-a317-000d3af44283") { ShowCanadaProvince2("invoice"); } else { ShowOtherProvince2("invoice"); };
-    LoadInvoiceCountry();
-  }).trigger('change'); // initialize state on load
+ 
+    const val = String($country.val() || "");
+ 
+    // if (val === CANADA_GUID) {
+    //   showCanadaProvince2("invoice");
+    //   applyCanadaProvinceValidator();
 
-  getActiveInvoiceCountry(curLang);
+    //   if (window.__validators_active) {
+    //     window.revalidate("ethi_invoiceprovince", "lookup", { scrollToFirstError: true });
+    //     window.revalidate('ethi_invoicepostalcode', 'text', { scrollToFirstError: true });
+    //   }
+    // } 
+    // else if (val) {
+    //   showOtherProvince2("invoice"); 
+ 
+    //   if (window.__validators_active) {
+    //     window.revalidate("ethi_invoiceprovincestate", "text", { scrollToFirstError: true });
+    //     window.revalidate("ethi_invoicepostalcodezipcode", "text");
+    //   }
+    // } 
+        if (val === CANADA_GUID) {
+      showCanadaProvince2("invoice");
+      applyCanadaProvinceValidator();
 
-  getActiveInvoiceProvinces(curLang);
+      // if (window.__validators_active) {
+      //   window.revalidate("ethi_invoiceprovince", "lookup", { scrollToFirstError: true });
+      //   window.revalidate('ethi_invoicepostalcode', 'text', { scrollToFirstError: true });
+      // }
+    } else {
+      showOtherProvince2("invoice"); 
+ 
+      // if (window.__validators_active) {
+      //   window.revalidate("ethi_invoiceprovincestate", "text", { scrollToFirstError: true });
+      //   window.revalidate("ethi_invoicepostalcodezipcode", "text");
+      // }
+    } 
+  }
+ 
+
+// Canada province/territory validator
+function applyCanadaProvinceValidator() {
+  if (window.__validators_active) {
+    addValidator({
+      id: 'ethi_invoiceprovince',
+      type: 'lookup',
+      required: true,
+      validators: [
+        {
+          validator: validateRequired,
+          message_en: invoiceProvinceLabel + " " + "{{snippets['ethi-requiredfield']}}",
+          message_fr: "Le champ " + invoiceProvinceLabel + " " + "{{snippets['ethi-requiredfield']}}",
+        }
+      ]
+    });
+
+    // Force revalidation for inline error 
+    window.revalidate('ethi_invoiceprovince', 'lookup', { scrollToFirstError: true });
+  } else {
+   
+    setTimeout(applyCanadaProvinceValidator, 100);
+  }
+}
+
+
+$country.off(".prov").on("change.prov", applyInvoiceProvinceRules);
+
+  // Initialize state on load
+  applyInvoiceProvinceRules();
+
+
+
+  // $("#ethi_invoicecountry")
+  //   .on('change', function () {
+  //     // removeValidators("ethi_invoiceprovincestate");
+  //     // removeValidators("ethi_invoicepostalcodezipcode");
+  //     // removeValidators("ethi_invoiceprovince");
+  //     // removeValidators("ethi_invoicepostalcode");
+  //     var value = $(this).val();
+  //     // Check for Canada GUID
+  //     if (value == "f23dc860-6f39-ef11-a317-000d3af44283") { 
+  //            showCanadaProvince2("invoice"); 
+  //     } else { 
+  //            showOtherProvince2("invoice"); };
+  //     LoadInvoiceCountry();
+  // }).triggerHandler('change'); // initialize UI without firing validators
+
+
+// if (window.__validators_active) { 
+//  $("#ethi_invoicecountry").change(function () {
+//     removeValidators("ethi_invoiceprovincestate");
+//     removeValidators("ethi_invoicepostalcodezipcode");
+//     removeValidators("ethi_invoiceprovince");
+//     removeValidators("ethi_invoicepostalcode");
+//     //var value = $(this).val();
+//     //if ($("#ethi_invoicecountry").val() == "f23dc860-6f39-ef11-a317-000d3af44283") { showCanadaProvince2("invoice"); } else { showOtherProvince2("invoice"); };
+//     showInvoiceProvince();
+//   }).trigger('change'); // initialize state on load
+// } else {
+//    //var value = $(this).val();    
+//    //if ($("#ethi_invoicecountry").val()  == "f23dc860-6f39-ef11-a317-000d3af44283") { showCanadaProvince2("invoice"); } else { ShowOtherProvince2("invoice"); };
+//    showInvoiceProvince();
+// };
 
   return true;
 
@@ -219,23 +294,26 @@ function checkCoastGuard() {
       });
   };
 }
-function LoadInvoiceCountry() {
+function showInvoiceProvince() {
   if ($("#ethi_invoicecountry").val() == "f23dc860-6f39-ef11-a317-000d3af44283"){ 
-    ShowCanadaProvince2("invoice");
+    showCanadaProvince2("invoice");
   }
-  else { ShowOtherProvince2("invoice"); };
+  else { showOtherProvince2("invoice"); };
 };
 
-  function ShowCanadaProvince2(param) {
+  function showCanadaProvince2(param) {
     $("div #ethi_" + param + "provincestate_label").closest('tr').hide(); //.parent().parent().hide //.css("display", "none");
     $("div #ethi_" + param + "postalcodezipcode_label").closest('tr').hide(); //.parent().parent().hide //.css("display", "none");
     $("div #ethi_" + param + "province_label").closest('tr').show(); //.parent().parent().show //.css("display", "block");
     $("div #ethi_" + param + "postalcode_label").closest('tr').show(); //.parent().parent().show //.css("display", "block");
 
-    removeValidators("ethi_" + param + "province");
-    removeValidators("ethi_" + param + "postalcode");
-    removeValidators("ethi_" + param + "provincestate");
-    removeValidators("ethi_" + param + "postalcodezipcode");
+    removeValidators("ethi_invoiceprovince");
+    removeValidators("ethi_invoicecity");
+    removeValidators("ethi_invoiceaddressline1");
+    removeValidators("ethi_invoiceaddressline2");
+    removeValidators("ethi_invoiceprovincestate");
+    removeValidators("ethi_invoicepostalcodezipcode");
+    removeValidators("ethi_invoicepostalcode");
 
     addValidator(
       {
@@ -251,6 +329,35 @@ function LoadInvoiceCountry() {
           }
         ]
       });
+    addValidator(
+      {
+        id: 'ethi_invoicecity',
+        type: 'text',
+        length: 100,
+        required: true,
+        validators: [
+        ]
+      });
+
+    addValidator(
+        {
+      id: 'ethi_invoiceaddressline1',
+      type: 'text',
+      length: 100,
+      required: true,
+      validators: [
+      ]
+    });
+    addValidator(
+        {
+      id: 'ethi_invoiceaddressline2',
+      type: 'text',
+      length: 100,
+      required: false,
+      validators: [
+      ]
+    });
+
     addValidator(
       {
         id: 'ethi_invoicepostalcode',
@@ -273,20 +380,26 @@ function LoadInvoiceCountry() {
     $("#ethi_" + param + "provincestate").val("");
     $("#ethi_" + param + "postalcodezipcode").val("");
 
-    getActiveInvoiceProvinces(curLang);
+    //getActiveInvoiceProvinces(lang);
+
+   window.revalidate('ethi_invoiceprovince', 'lookup', { scrollToFirstError: true });
+   window.revalidate('ethi_invoicepostalcode', 'text', { scrollToFirstError: true });
 
   };
 
-  function ShowOtherProvince2(param) {
+  function showOtherProvince2(param) {
     $("div #ethi_" + param + "provincestate_label").closest('tr').show(); //.parent().parent().show //.css("display", "block");
     $("div #ethi_" + param + "postalcodezipcode_label").closest('tr').show(); //.parent().parent().show //.css("display", "block");
     $("div #ethi_" + param + "province_label").closest('tr').hide(); //.parent().parent().hide //.css("display", "none");
     $("div #ethi_" + param + "postalcode_label").closest('tr').hide(); //.parent().parent().hide //.css("display", "none");
 
-    removeValidators("ethi_" + param + "province");
-    removeValidators("ethi_" + param + "postalcode");
-    removeValidators("ethi_" + param + "provincestate");
-    removeValidators("ethi_" + param + "postalcodezipcode");
+    removeValidators("ethi_invoiceprovince");
+    removeValidators("ethi_invoicecity");
+    removeValidators("ethi_invoiceaddressline1");
+    removeValidators("ethi_invoiceaddressline2");
+    removeValidators("ethi_invoiceprovincestate");
+    removeValidators("ethi_invoicepostalcodezipcode");
+    removeValidators("ethi_invoicepostalcode");
 
     addValidator(
       {
@@ -302,6 +415,36 @@ function LoadInvoiceCountry() {
           }
         ]
       });
+
+    addValidator(
+      {
+        id: 'ethi_invoicecity',
+        type: 'text',
+        length: 100,
+        required: true,
+        validators: [
+        ]
+      });
+
+    addValidator(
+        {
+      id: 'ethi_invoiceaddressline1',
+      type: 'text',
+      length: 100,
+      required: true,
+      validators: [
+      ]
+    });
+    addValidator(
+        {
+      id: 'ethi_invoiceaddressline2',
+      type: 'text',
+      length: 100,
+      required: false,
+      validators: [
+      ]
+    });
+
     addValidator(
       {
         id: 'ethi_invoicepostalcodezipcode',
@@ -318,6 +461,8 @@ function LoadInvoiceCountry() {
       });
     $("#ethi_" + param + "province").val("");
     $("#ethi_" + param + "postalcode").val("");
+    window.revalidate('ethi_invoiceprovincestate', 'text', { scrollToFirstError: true });
+    window.revalidate('ethi_invoicepostalcodezipcode', 'text', { scrollToFirstError: true });
   };
 
   function getActiveInvoiceCountry(lang) {
