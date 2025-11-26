@@ -1,5 +1,4 @@
 // SSI Step 5 
-//$(function() {
 window.addEventListener("load", (e) => {
     document.title =   "{{snippets['ethi-ssi-step5']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
     $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step5']}}"+"</h2>");
@@ -15,6 +14,20 @@ window.addEventListener("load", (e) => {
     //$("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
     $('#wb-sm').remove();
     $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
+  
+    //set focus to document body
+    $('body').attr('tabindex', '-1').focus();
+    setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
+
+// Remove native tooltips on read-only summary pages (inputs/selects/textareas only)
+  $('.crmEntityFormView input[title], .crmEntityFormView select[title], .crmEntityFormView textarea[title]')
+    .each(function () {
+      // keep a breadcrumb for debugging if you want
+      $(this).attr('data-title-removed', $(this).attr('title'));
+      this.removeAttribute('title');
+    });
+
     $("#ethi_uploadshipparticulars").hide();
     $("#ethi_uploadshipparticulars_delete_button").hide();
     $("#ethi_existingssc").hide();
@@ -52,10 +65,30 @@ window.addEventListener("load", (e) => {
   if ($("#ethi_otherregistryflag").val()) { $("#ethi_otherregistryflag").parent().parent().show() }
   else { $("#ethi_otherregistryflag").parent().parent().hide() };
 
+// Make the “ethi_canadiancoastguard” radios tabbable but read-only
+ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
+ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial postbacks
+
     if($("#ethi_canadiancoastguard_0").is(':checked')){
         $("#ethi_isorganizationnumber").parent().parent().hide();
         $("#ethi_isreferencenumber").parent().parent().hide();
     };
+
+// Make the “Canadian coast guard” radios tabbable but read-only
+ReadOnlyRadioGroup.make({ 
+  container: '#ethi_canadiancoastguard', 
+  label: '#ethi_canadiancoastguard_label' // optional; helper can infer it
+});
+ReadOnlyRadioGroup.reapply({ 
+  container: '#ethi_canadiancoastguard', 
+  label: '#ethi_canadiancoastguard_label'
+});
+BindRadioGroupLabel.make({
+  group: '#ethi_canadiancoastguard',
+  label: '#ethi_canadiancoastguard_label'
+});
+
+
 });
 
 // Format date to 'yyyy-mm-dd hh:mm AM/PM'
