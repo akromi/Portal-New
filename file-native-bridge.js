@@ -32,18 +32,131 @@
     return lang.startsWith('fr') ? 'fr' : 'en';
   }
 
+  // Try to re-use the platform RequiredFieldValidator message for the hidden filename field
+  function getRequiredMessageFromHidden(input, lang) {
+    try {
+      if (!input || !input.id) return "";
+
+      var inputId = String(input.id);
+      // file inputs are usually "<baseId>_input_file"
+      var baseId = inputId.replace(/_input_file$/, '');
+
+      // Typical PP patterns:
+      //   ethi_uploadshipparticulars_input_file  -> ethi_uploadshipparticularshidden_filename
+      //   <baseId>_input_file                    -> <baseId>_hidden_filename (fallback)
+      var hiddenIds = [
+        baseId + 'hidden_filename',
+        baseId + '_hidden_filename'
+      ];
+
+      if (window.Page_Validators && Array.isArray(window.Page_Validators)) {
+        for (var h = 0; h < hiddenIds.length; h++) {
+          var hid = hiddenIds[h];
+          if (!hid) continue;
+
+          for (var i = 0; i < window.Page_Validators.length; i++) {
+            var v = window.Page_Validators[i];
+            if (!v) continue;
+            if (String(v.controltovalidate || '') !== hid) continue;
+
+            // Prefer the stock RequiredFieldValidator for this hidden field
+            if (typeof v.id === 'string' &&
+                v.id.indexOf('RequiredFieldValidator') !== 0) {
+              continue;
+            }
+
+            var raw = v.errormessage || "";
+            if (!raw) continue;
+
+            // Strip any HTML (anchors, spans) to get plain text
+            var tmp = document.createElement('div');
+            tmp.innerHTML = raw;
+            var txt = (tmp.textContent || tmp.innerText || '').trim();
+            if (txt) return txt;
+          }
+        }
+      }
+    } catch (e) {
+      DBG('getRequiredMessageFromHidden: error resolving message for', input && input.id, e);
+    }
+    return "";
+  }
+
+  // function getMessage(input, key, lang) {
+  //   // keys for data-msg-*: required, zero, max, type
+  //   const dataKey = `data-msg-${key}-${lang}`;
+  //   const custom = input.getAttribute(dataKey);
+  //   if (custom) return custom;
+  //   const map = { zero: 'zeroByte', max: 'maxSize', type: 'fileTypes' };
+  //   const defaults = DEFAULT_MESSAGES[lang] || DEFAULT_MESSAGES.en;
+  //   return defaults[map[key] || key] || "";
+  // }
+
   function getMessage(input, key, lang) {
     // keys for data-msg-*: required, zero, max, type
     const dataKey = `data-msg-${key}-${lang}`;
     const custom = input.getAttribute(dataKey);
     if (custom) return custom;
+
+    // For "required", try to re-use the PP RequiredFieldValidator message
+    if (key === 'required') {
+      const fromHidden = getRequiredMessageFromHidden(input, lang);
+      if (fromHidden) return fromHidden;
+    }
+
     const map = { zero: 'zeroByte', max: 'maxSize', type: 'fileTypes' };
     const defaults = DEFAULT_MESSAGES[lang] || DEFAULT_MESSAGES.en;
     return defaults[map[key] || key] || "";
   }
 
+
   function getFileInput(baseId) {
     return document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
+  }
+
+    // NEW: treat existing server-side file as satisfying "required" when no local file is selected
+  function hasExistingServerFile(baseId, input) {
+    try {
+      // 1) Explicit marker on the container, if present
+      var container = input && input.closest ? input.closest('.file-control-container') : null;
+      if (container && container.hasAttribute('data-has-server-file')) {
+        var flag = container.getAttribute('data-has-server-file');
+        if (flag === '' || flag === 'true' || flag === '1') {
+          DBG('hasExistingServerFile: container data-has-server-file=true for', baseId);
+          return true;
+        }
+      }
+
+      // 2) Hidden "filename" fields rendered by Power Pages
+      //    Step3 uses e.g. ethi_uploadshipparticularshidden_filename (no underscore)
+      var hiddenIds = [
+        baseId + 'hidden_filename',   // e.g. ethi_uploadshipparticularshidden_filename
+        baseId + '_hidden_filename'   // fallback pattern if used elsewhere
+      ];
+      for (var i = 0; i < hiddenIds.length; i++) {
+        var h = document.getElementById(hiddenIds[i]);
+        if (h && String(h.value || '').trim().length > 0) {
+          DBG('hasExistingServerFile: hidden filename present on', hiddenIds[i], 'for', baseId);
+          return true;
+        }
+      }
+
+      // 3) Visible filename span (if no hidden field is present)
+      var nameSpan = document.getElementById(baseId + '_file_name');
+      if (nameSpan) {
+        var txt = String(nameSpan.textContent || '').trim();
+        // Skip typical "no file selected" text in EN/FR
+        if (txt &&
+            !/Aucun fichier sélectionné/i.test(txt) &&
+            !/No file selected/i.test(txt)) {
+          DBG('hasExistingServerFile: non-empty file name span for', baseId);
+          return true;
+        }
+      }
+    } catch (e) {
+      DBG('hasExistingServerFile: error while probing for existing file on', baseId, e);
+    }
+    return false;
   }
 
   function getConfig(input) {
@@ -78,34 +191,190 @@
     return formIsOptedIn(form);
   }
 
-  function validateFile(baseId, input, lang) {
-    const config = getConfig(input);
-    const file = input.files && input.files[0];
 
-    if (!file || input.files.length === 0) {
-      return { valid: false, errorType: 'required', errorMessage: getMessage(input, 'required', lang) };
+  // Public bridge helper (idempotent)
+window.triggerValidationNow = function (baseId, type) {
+  try { if (typeof updatesOnChange === 'function') { updatesOnChange({ id: baseId, type: type || 'file' }, new Event('synthetic')); } } catch (e) {}
+  try { if (typeof globalEvaluationFunction === 'function') { globalEvaluationFunction(); } } catch (e) {}
+};
+
+
+  // function validateFile(baseId, input, lang) {
+  //   const config = getConfig(input);
+  //   const file = input.files && input.files[0];
+
+  //   if (!file || input.files.length === 0) {
+  //     return { valid: false, errorType: 'required', errorMessage: getMessage(input, 'required', lang) };
+  //   }
+  //   if (file.size === 0) {
+  //     return { valid: false, errorType: 'zeroByte', errorMessage: getMessage(input, 'zero', lang) };
+  //   }
+  //   if (file.size > config.maxBytes) {
+  //     const mb = (config.maxBytes / (1024 * 1024)).toFixed(1);
+  //     let msg = getMessage(input, 'max', lang).replace('{MB}', mb);
+  //     return { valid: false, errorType: 'maxSize', errorMessage: msg };
+  //   }
+  //   const name = String(file.name || '').trim();
+  //   const dot = name.lastIndexOf('.');
+  //   if (dot <= 0) {
+  //     let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
+  //     return { valid: false, errorType: 'fileTypes', errorMessage: msg };
+  //   }
+  //   const ext = name.slice(dot + 1).toLowerCase();
+  //   if (!config.allowedExt.includes(ext)) {
+  //     let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
+  //     return { valid: false, errorType: 'fileTypes', errorMessage: msg };
+  //   }
+  //   return { valid: true, errorType: null, errorMessage: '' };
+  // }
+
+  //   function validateFile(baseId, input, lang) {
+  //   const config = getConfig(input);
+
+  //   const files = input && input.files ? input.files : null;
+  //   const file = files && files.length ? files[0] : null;
+
+  //   // No local file selected
+  //   if (!file || !files || files.length === 0) {
+  //     // If the record already has a server-side file, "required" is satisfied
+  //     if (hasExistingServerFile(baseId, input)) {
+  //       DBG('validateFile: no local file but existing server file detected for', baseId);
+  //       return { valid: true, errorType: null, errorMessage: '' };
+  //     }
+
+  //     DBG('validateFile: required file missing for', baseId);
+  //     return {
+  //       valid: false,
+  //       errorType: 'required',
+  //       errorMessage: getMessage(input, 'required', lang)
+  //     };
+  //   }
+
+  //   // Local file selected → apply size/type rules
+
+  //   if (file.size === 0) {
+  //     DBG('validateFile: zero-byte file for', baseId);
+  //     return {
+  //       valid: false,
+  //       errorType: 'zeroByte',
+  //       errorMessage: getMessage(input, 'zero', lang)
+  //     };
+  //   }
+
+  //   if (file.size > config.maxBytes) {
+  //     const mb = (config.maxBytes / (1024 * 1024)).toFixed(1);
+  //     let msg = getMessage(input, 'max', lang).replace('{MB}', mb);
+  //     DBG('validateFile: file too large for', baseId, 'size=', file.size, 'maxBytes=', config.maxBytes);
+  //     return {
+  //       valid: false,
+  //       errorType: 'maxSize',
+  //       errorMessage: msg
+  //     };
+  //   }
+
+  //   const name = String(file.name || '').trim();
+  //   const dot = name.lastIndexOf('.');
+
+  //   if (dot <= 0) {
+  //     let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
+  //     DBG('validateFile: file has no extension for', baseId, 'name=', name);
+  //     return {
+  //       valid: false,
+  //       errorType: 'fileTypes',
+  //       errorMessage: msg
+  //     };
+  //   }
+
+  //   const ext = name.slice(dot + 1).toLowerCase();
+  //   if (!config.allowedExt.includes(ext)) {
+  //     let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
+  //     DBG('validateFile: extension not allowed for', baseId, 'ext=', ext);
+  //     return {
+  //       valid: false,
+  //       errorType: 'fileTypes',
+  //       errorMessage: msg
+  //     };
+  //   }
+
+  //   DBG('validateFile: file is valid for', baseId, 'name=', name, 'size=', file.size);
+  //   return { valid: true, errorType: null, errorMessage: '' };
+  // }
+
+
+function validateFile(baseId, input, lang) {
+  const config = getConfig(input);
+  const file = input.files && input.files[0];
+
+  // NEW: treat existing server-side file as satisfying "required"
+  // when there is no local file selected.
+  if (!file || input.files.length === 0) {
+    if (hasExistingServerFile(baseId, input)) {
+      DBG('validateFile: no local file, but existing server file detected for', baseId);
+      return {
+        valid: true,
+        errorType: null,
+        errorMessage: ''
+      };
     }
-    if (file.size === 0) {
-      return { valid: false, errorType: 'zeroByte', errorMessage: getMessage(input, 'zero', lang) };
-    }
-    if (file.size > config.maxBytes) {
-      const mb = (config.maxBytes / (1024 * 1024)).toFixed(1);
-      let msg = getMessage(input, 'max', lang).replace('{MB}', mb);
-      return { valid: false, errorType: 'maxSize', errorMessage: msg };
-    }
-    const name = String(file.name || '').trim();
-    const dot = name.lastIndexOf('.');
-    if (dot <= 0) {
-      let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
-      return { valid: false, errorType: 'fileTypes', errorMessage: msg };
-    }
-    const ext = name.slice(dot + 1).toLowerCase();
-    if (!config.allowedExt.includes(ext)) {
-      let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
-      return { valid: false, errorType: 'fileTypes', errorMessage: msg };
-    }
-    return { valid: true, errorType: null, errorMessage: '' };
+
+    DBG('validateFile: no local or server file for', baseId);
+    return {
+      valid: false,
+      errorType: 'required',
+      errorMessage: getMessage(input, 'required', lang)
+    };
   }
+
+  // Zero-byte check
+  if (file.size === 0) {
+    DBG('validateFile: zero-byte file for', baseId);
+    return {
+      valid: false,
+      errorType: 'zeroByte',
+      errorMessage: getMessage(input, 'zero', lang)
+    };
+  }
+
+  // Max-size check
+  if (file.size > config.maxBytes) {
+    const mb = (config.maxBytes / (1024 * 1024)).toFixed(1);
+    let msg = getMessage(input, 'max', lang).replace('{MB}', mb);
+    DBG('validateFile: file too large for', baseId, 'size=', file.size, 'maxBytes=', config.maxBytes);
+    return {
+      valid: false,
+      errorType: 'maxSize',
+      errorMessage: msg
+    };
+  }
+
+  // Extension check
+  const name = String(file.name || '').trim();
+  const dot = name.lastIndexOf('.');
+  if (dot <= 0) {
+    let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
+    DBG('validateFile: file has no extension for', baseId, 'name=', name);
+    return {
+      valid: false,
+      errorType: 'fileTypes',
+      errorMessage: msg
+    };
+  }
+
+  const ext = name.slice(dot + 1).toLowerCase();
+  if (!config.allowedExt.includes(ext)) {
+    let msg = getMessage(input, 'type', lang).replace('{list}', config.allowedExt.join(', '));
+    DBG('validateFile: extension not allowed for', baseId, 'ext=', ext);
+    return {
+      valid: false,
+      errorType: 'fileTypes',
+      errorMessage: msg
+    };
+  }
+
+  DBG('validateFile: file is valid for', baseId, 'name=', name, 'size=', file.size);
+  return { valid: true, errorType: null, errorMessage: '' };
+}
+
 
   function createBridgeValidator(baseId) {
     const input = getFileInput(baseId);
@@ -152,26 +421,120 @@
     }
   }
 
-  function register(baseId) {
-    const input = getFileInput(baseId);
-    if (!input) { DBG('register: no input for', baseId); return; }
-    if (!isEligible(baseId, input)) { DBG('register: not opted-in; skip', baseId); return; }
-
-    if (input.dataset.bridgeRegistered === '1') { DBG('register: already', baseId); return; }
-    input.dataset.bridgeRegistered = '1';
-    LOG('Registering', baseId);
-
-    addBridgeValidatorLast(baseId);
-
-    input.addEventListener('invalid', function (e) {
-      e.preventDefault();
-      if (typeof window.globalEvaluationFunction === 'function') window.globalEvaluationFunction();
-    }, false);
-
-    if (typeof window.suppressStockFileErrors === 'function') {
-      window.suppressStockFileErrors([baseId]);
-    }
+  function baseFromInput(el) {
+    return String(el && el.id || '')
+      .replace(/_input_file$/i, '')
+      .replace(/hidden_(filename|filetype|file_size)$/i, '');
   }
+
+
+// 
+function register(baseId) {
+  baseId = String(baseId || '').trim();
+  if (!baseId) return function () {};
+
+  // Ensure our bridge validator is appended after any stock validators
+  try { if (typeof addBridgeValidatorLast === 'function') addBridgeValidatorLast(baseId); } catch (_) {}
+
+  // Resolve PP native input
+  var input = document.getElementById(baseId + '_input_file') || document.getElementById(baseId);
+  if (!input) return function () {};
+
+  // Unhook prior handlers (if any)
+  if (input.__wetBridgeHandlers) {
+    try {
+      var old = input.__wetBridgeHandlers;
+      input.removeEventListener('invalid', old.invalid, true);
+      input.removeEventListener('change',  old.change,  false);
+      input.removeEventListener('blur',    old.blur,    false);
+    } catch (_) {}
+  }
+
+  // // invalid: capture=true so we can suppress the browser bubble; no stopPropagation
+  // function onInvalid(e) {
+  //   if (e && e.preventDefault) e.preventDefault(); // kill native tooltip
+  //   try {
+  //     if (typeof updatesOnChange === 'function') updatesOnChange({ id: baseId, type: 'file' }, e || new Event('synthetic'));
+  //     if (typeof globalEvaluationFunction === 'function') globalEvaluationFunction();
+  //     if (typeof ValidatorUpdateIsValid === 'function') ValidatorUpdateIsValid();
+  //   } catch (_) {}
+  // }
+
+  // // change/blur: bubble phase; no stopPropagation; defer so PP/your relabeler run first
+  // function onChangeLike(e) {
+  //   setTimeout(function () {
+  //     try {
+  //       if (typeof updatesOnChange === 'function') updatesOnChange({ id: baseId, type: 'file' }, e || new Event('synthetic'));
+  //       if (typeof globalEvaluationFunction === 'function') globalEvaluationFunction();
+  //       if (typeof ValidatorUpdateIsValid === 'function') ValidatorUpdateIsValid();
+  //     } catch (_) {}
+  //   }, 0);
+  // }
+
+  // // Attach with correct phases
+  // input.addEventListener('invalid', onInvalid, true);  // CAPTURE
+  // input.addEventListener('change',  onChangeLike, false); // BUBBLE
+  // input.addEventListener('blur',    onChangeLike, false); // BUBBLE
+
+  // fileNativeBridge.js  — inside register(baseId)
+
+/* helper */
+function validatorsActive() {
+  return !!(window.__validators_active);
+}
+
+// invalid: capture=true so we can suppress the browser bubble; remain quiet pre-activation
+function onInvalid(e) {
+  if (e && e.preventDefault) e.preventDefault();    // kill native tooltip
+  if (e && e.stopPropagation) e.stopPropagation();  // keep it from bubbling
+  if (!validatorsActive()) return;                  // <-- QUIET until first Next
+
+  try {
+    if (typeof updatesOnChange === 'function')
+      updatesOnChange({ id: baseId, type: 'file' }, e || new Event('synthetic'));
+    if (typeof globalEvaluationFunction === 'function')
+      globalEvaluationFunction();
+    if (typeof ValidatorUpdateIsValid === 'function')
+      ValidatorUpdateIsValid();
+  } catch (_) {}
+}
+
+// change/blur: allow filename relabel to run; only validate once active
+function onChangeLike(e) {
+  setTimeout(function () {
+    if (!validatorsActive()) return;                // <-- QUIET until first Next
+    try {
+      if (typeof updatesOnChange === 'function')
+        updatesOnChange({ id: baseId, type: 'file' }, e || new Event('synthetic'));
+      if (typeof globalEvaluationFunction === 'function')
+        globalEvaluationFunction();
+      if (typeof ValidatorUpdateIsValid === 'function')
+        ValidatorUpdateIsValid();
+    } catch (_) {}
+  }, 0);
+}
+
+// Attach with correct phases (unchanged)
+input.addEventListener('invalid', onInvalid,  true);   // CAPTURE
+input.addEventListener('change',  onChangeLike, false);
+input.addEventListener('blur',    onChangeLike, false);
+
+  // Mark & expose unhook
+  input.__wetBridgeHandlers = { invalid: onInvalid, change: onChangeLike, blur: onChangeLike };
+
+  try { input.setAttribute('data-wet-bridge', '1'); } catch (_) {}
+  try { if (typeof suppressStockFileErrors === 'function') suppressStockFileErrors([baseId]); } catch (_) {}
+
+  return function unhook() {
+    try {
+      input.removeEventListener('invalid', onInvalid, true);
+      input.removeEventListener('change',  onChangeLike, false);
+      input.removeEventListener('blur',    onChangeLike, false);
+    } catch (_) {}
+    try { delete input.__wetBridgeHandlers; } catch (_) {}
+  };
+}
+
 
   function unregister(baseId) {
     const input = getFileInput(baseId);
@@ -188,6 +551,24 @@
     }
     LOG('Unregistered', baseId);
   }
+
+
+window.FileNativeBridge = window.FileNativeBridge || {};
+
+// Enable bridge for one field base id (returns an unhook fn if you need it)
+window.FileNativeBridge.enableForField = function enableForField(baseId) {
+  return register(String(baseId || '').trim());
+};
+
+// Convenience for multiple
+window.FileNativeBridge.enableForFields = function enableForFields(bases) {
+  (bases || []).forEach(function (b) { register(String(b || '').trim()); });
+};
+
+// Optional: explicit disable
+window.FileNativeBridge.disableForField = function disableForField(baseId) {
+  unregister(String(baseId || '').trim());
+};
 
   function registerWithinForm(form) {
     if (!form) return 0;
@@ -218,6 +599,18 @@
     optedInFields.add(baseId);
     register(baseId);
     return 1;
+  };
+
+  // NEW helper: allow other modules to check if a server-side file exists
+  window.FileStockSuppression.hasExistingServerFile = function (baseId) {
+    const input = getFileInput(baseId);
+    if (!input) return false;
+    try {
+      return hasExistingServerFile(baseId, input);
+    } catch (e) {
+      DBG('hasExistingServerFile wrapper: error for', baseId, e);
+      return false;
+    }
   };
 
   window.FileStockSuppression.unregisterAll = function () {
