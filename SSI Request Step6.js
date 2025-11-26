@@ -1,8 +1,11 @@
 //Step6 Confirmation
 //$(function() {
+const SSI_STEP6_PAGE_TITLE = "{{snippets['ethi-ssi-request-confirmation']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP6_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
     debugger;
-    document.title = "{{snippets['ethi-ssi-request-confirmation']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+    document.title = SSI_STEP6_PAGE_TITLE;
     //$("#wb-lng").attr("class","text-right");
    // $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
     $('#wb-sm').remove();
