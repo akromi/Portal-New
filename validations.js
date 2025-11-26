@@ -188,12 +188,15 @@ function globalEvaluationFunction() {
     });
 
     var n = items.length;
-    $sum.find('> h2').text(
-      currentLang === 'en'
-        ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-        : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
-          (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-    );
+    var headingText = (currentLang === 'en'
+      ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+      : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+        (n > 1 ? "s ont été trouvées." : " a été trouvée."));
+
+    // Keep all accessible labels in sync so screen readers announce the same heading
+    $sum.find('> h2').text(headingText);
+    $sum.attr('aria-label', headingText);
+    $sum.find('.wb-inv, .visually-hidden, .sr-only').text(headingText);
 
     $sum.find('a').css('text-decoration', 'underline');
     $sum.show();
