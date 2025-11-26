@@ -1,7 +1,10 @@
 //Step 2
+const GI_STEP2_PAGE_TITLE = "{{snippets['ethi-gi-step2-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
+document.title = GI_STEP2_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
 
-  document.title =   "{{snippets['ethi-gi-step2-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
+  document.title = GI_STEP2_PAGE_TITLE;
 
   //Using an immediately invoked function expression, to remove "basic form form" via aria-label + role for accessibility
 (function removeBasicFormAria() { 

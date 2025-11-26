@@ -1,6 +1,9 @@
-// SSI Step 5 
+// SSI Step 5
+const SSI_STEP5_PAGE_TITLE = "{{snippets['ethi-ssi-step5']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP5_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
-    document.title =   "{{snippets['ethi-ssi-step5']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+    document.title = SSI_STEP5_PAGE_TITLE;
     $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step5']}}"+"</h2>");
     $("input:not([type='radio'],[type='button'],[id='wb-srch-q'])").css({"width": "500px"}).removeAttr('maxlength');
     $('textarea').css('width', '500px');
