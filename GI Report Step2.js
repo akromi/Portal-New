@@ -1,7 +1,6 @@
 //Step 2
 window.addEventListener("load", (e) => {
 
-  debugger;
   document.title =   "{{snippets['ethi-gi-step2-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
 
   //Using an immediately invoked function expression, to remove "basic form form" via aria-label + role for accessibility
@@ -22,7 +21,8 @@ window.addEventListener("load", (e) => {
   $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
   $('#wb-sm').remove();
   $("input").removeAttr("placeholder");
-  //$('body').classList.add('read-only-summary');
+  // Flag page as a read-only summary so radios render in grey
+  $('body').addClass('read-only-summary');
   //$('#wb-tphp a.wb-sl')?.focus(); // should focus the skip link
 
   $('body').attr('tabindex', '-1').focus();
@@ -35,12 +35,15 @@ window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or 
   var lang = $('html').attr('data-lang') || "en";
 
   const styleString = "outline: none;border: none; width: 50%";
-// Read-only summary: strip required class to prevent visual asterisks
-$('.crmEntityFormView .table-info.required').removeClass('required');
+// Read-only summary: strip required cues so asterisks do not appear on locked fields
+const $form = $('.crmEntityFormView');
+$form.find('.table-info.required, .required').removeClass('required');
 // Also hide any lingering validator star containers
-$('.crmEntityFormView .validators').hide();
+$form.find('.validators').hide();
 // Prevent SR from announcing 'required' on read-only summary fields
-$('.crmEntityFormView [aria-required="true"]').removeAttr('aria-required');
+$form.find('[aria-required="true"]').removeAttr('aria-required');
+// Remove inline <abbr>*</abbr> marks that sometimes decorate required labels
+$form.find('abbr').filter(function () { return $(this).text().trim() === '*'; }).remove();
 
 // Report type (summary view): make it visually read-only and non-interactive
 // Keep SR + Tab working; no hints injected.
@@ -51,6 +54,7 @@ TabbableReadOnly.make('#ethi_nextport_name', { ariaDisabled: true, label: '#ethi
 TabbableReadOnly.reapply('#ethi_nextport_name', { ariaDisabled: true, label: '#ethi_nextport_label' });
 
 // Make the “Submitter is medical contact?” radios tabbable but read-only
+$('#ethi_submitterismedicalcontact').addClass('wet-patched-radio');
 ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
 ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial postbacks
 BindRadioGroupLabel.make({
@@ -107,10 +111,6 @@ BindRadioGroupLabel.make({
   $("#ethi_nextcanadadateandtimeportal").val($("#ethi_nextcanadadate").val() + " " + $("#ethi_nextcanadatime").val());
 
   //console.log($("#ethi_nextcanadadateandtimeportal").val());
-  const $f = $("#ethi_nextcanadadateandtimeportal");
-  console.log('found:', $f.length, 'tag:', $f.prop('tagName'), 'type:', $f.attr('type'));
-  console.log('val():', $f.val(), 'text():', $f.text());
-
 // Remove native tooltips on read-only summary pages (inputs/selects/textareas only)
  $('.crmEntityFormView input[title], .crmEntityFormView select[title], .crmEntityFormView textarea[title]')
     .each(function () {
