@@ -158,9 +158,38 @@ function globalEvaluationFunction() {
   }
 
 // 4) Rebuild the summary list to exactly match the de-duped items
+  var $sum = $('#ValidationSummaryEntityFormView');
+  var headingText = '';
+
+  // Helper: ensure a single, consistent live region and clear any stale hidden text
+  var $live = $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').first();
+  function syncLiveRegion(text) {
+    if (!$live.length) {
+      $live = $('<p class="wb-inv" aria-live="polite" role="alert"></p>').prependTo($sum);
+    }
+    if (!$live.attr('aria-live')) $live.attr('aria-live', 'polite');
+    if (!$live.attr('role')) $live.attr('role', 'alert');
+
+    // Remove stale hidden text siblings so only one announcement source remains
+    $sum.children('.wb-inv, .sr-only, .visually-hidden, .sr-only-inline').not($live).text('');
+
+    $live.text(text);
+  }
+
+  if (items.length > 0) {
+    var n = items.length;
+    headingText = (currentLang === 'en'
+      ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+      : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+        (n > 1 ? "s ont été trouvées." : " a été trouvée."));
+    // Update the live region immediately so screen readers hear the same text as the heading
+    syncLiveRegion(headingText);
+  } else {
+    syncLiveRegion('');
+  }
+
   setTimeout(function () {
     var focused = $(':focus');
-    var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
     // A11y: ensure the UL keeps its native list semantics
@@ -172,6 +201,7 @@ function globalEvaluationFunction() {
     if (items.length === 0) {
       // No errors → hide the summary and clear heading/accessibility text
       $sum.find('> h2').text('');
+      syncLiveRegion('');
       $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').text('');
       $sum.hide();
       try { focused.focus(); } catch (e) { }
@@ -188,6 +218,10 @@ function globalEvaluationFunction() {
       $ul.append($('<li/>').append($a));
     });
 
+    // Keep the visible heading and screen-reader-only text in sync so AT users
+    // hear the same message when the summary first appears and when they revisit it.
+    $sum.find('> h2').text(headingText);
+    syncLiveRegion(headingText);
     var n = items.length;
     var headingText = (currentLang === 'en'
       ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
