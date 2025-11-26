@@ -1,4 +1,6 @@
 // validations.js
+//
+// Show this comment 2025.11.10 11:28 am.
 
 //
 // Accessibility and Validation Lib
@@ -27,14 +29,17 @@
 //
 
 // Global
-const currentLang = $('html').attr('lang') || 'en';
-
+//const currentLang = $('html').attr('lang') || 'en';
+const currentLang = String($('html').attr('lang') || 'en').split('-')[0].toLowerCase();
 // PRIVATE
-//
 function addAccessibilityMods(id) {
     var label = $('#' + id + '_label');
     var text = label.text();
-    label.text('');
+
+    text = text.replace(/\s*\(required\)\s*/gi, ' ').replace(/\s*\(obligatoire\)\s*/gi, ' ').trim();
+
+    //label.text('');
+    label.empty(); 
     label.addClass('required');
     label.closest('div').removeClass('required');
 
@@ -44,9 +49,11 @@ function addAccessibilityMods(id) {
     input.removeAttr('aria-required');
     input.attr('required', 'required');
 
-    var span = label.append('<span class="field-name">' + text + '</span>');
+    //var span = label.append('<span class="field-name">' + text + '</span>');
     var requiredText = currentLang === 'en' ? ' (required)' : ' (obligatoire)';
-    span.append(`<strong aria-hidden="true" class="required"><span> ${requiredText}</span></strong>`);
+    label
+    .append(`<span class="field-name">${text}</span> `)
+    .append(`<strong aria-hidden="true" class="required"><span> ${requiredText}</span></strong>`);
 
 
 }
@@ -70,7 +77,6 @@ function removeAccessibilityMods(id) {
 }
 
 
-
 ///////////////////////////////////////////////////////////
 //                                                       //
 //                 Global Validator function             //
@@ -83,129 +89,7 @@ function removeAccessibilityMods(id) {
 // no page validation event we use this technique to in effect create
 // an event to allow us to inject validations.
 //
-//
-//
 // PRIVATE
-// PRIVATE
-// function globalEvaluationFunction() {
-//   // 1) Clear older inline messages
-//   for (var i = 0; i < Page_Validators.length; i++) {
-//     var v0 = Page_Validators[i];
-//     var id0 = String(v0.controltovalidate || '');
-//     $('#'+id0+'_label > span[id='+id0+'_err]').remove();
-//     $('#'+id0+'_label > br').remove();
-//   }
-
-//   // 2) Collect invalid validators → de-dupe by logical field
-//   var seen = Object.create(null);
-//   var items = []; // { id, type, msg }
-
-//   for (var j = 0; j < Page_Validators.length - 1; j++) { // skip our global
-//     var v = Page_Validators[j];
-//     if (v.isvalid !== false) continue;
-
-//     var id = String(v.controltovalidate || '');
-
-//     // Ignore PP's hidden file validators (both ..._hidden_* and ...hidden_*)
-//     if (/_hidden_(filename|filetype)$/.test(id) || /(hidden_)(filename|filetype)$/.test(id))
-//       continue;
-
-//     // Normalize to the base (logical) field id (strip partner suffixes)
-//     var base = id.replace(/(_datepicker(_description)?|_timepicker(_description)?|_name|_value|_entityname|_text|_input_file)$/,'');
-//     if (seen[base]) continue;   // keep ONE reason per field
-//     seen[base] = true;
-
-//     var link = $(v.errormessage);
-//     var text = link.text();
-//     var msg  = (currentLang === 'en'
-//       ? 'Error '  + (items.length+1) + ': ' + text
-//       : 'Erreur ' + (items.length+1) + ' : ' + text);
-
-//    var inferredType = v.type || (
-//   document.getElementById(base + '_datepicker_description') || document.getElementById(base + '_datepicker') ? 'date' :
-//   document.getElementById(base + '_timepicker_description') || document.getElementById(base + '_timepicker') ? 'time' :
-//   ($('#' + base).is('select') ? 'lookup' : '')
-// );
-// items.push({ id: base, type: inferredType, msg: msg });
-//   }
-
-//   // 3) Repaint inline (single message per field)
-//   for (var k = 0; k < items.length; k++) {
-//     updateLabelErrorMessage(items[k].id, items[k].type, items[k].msg);
-//   }
-
-//   // // 4) Rebuild the summary list to exactly match the de-duped items
-//   // if (items.length > 0) {
-//   //   setTimeout(function () {
-//   //     var focused = $(':focus');
-//   //     var $sum = $('#ValidationSummaryEntityFormView');
-//   //     var $ul  = $sum.find('> ul');
-
-//   //     $ul.empty();
-//   //     items.forEach(function (it) {
-//   //       var $a = $('<a/>', {
-//   //         href: '#' + it.id + '_label',
-//   //         onclick: 'javascript:scrollToAndFocus("' + it.id + '_label","' + it.id + '"); return false;',
-//   //         text: it.msg
-//   //       });
-//   //       $ul.append($('<li/>').append($a));
-//   //     });
-
-//   //     var n = items.length;
-//   //     $sum.find('> h2').text(
-//   //       currentLang === 'en'
-//   //         ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-//   //         : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-//   //     );
-
-//   //     $sum.find('a').css('text-decoration', 'underline');
-//   //     $sum.blur().show();
-//   //     focused.focus();
-//   //   }, 250);
-
-//   // 4) Rebuild the summary list to exactly match the de-duped items
-// setTimeout(function () {
-//   var focused = $(':focus');
-//   var $sum = $('#ValidationSummaryEntityFormView');
-//   var $ul  = $sum.find('> ul');
-
-//   // Always clear current list
-//   $ul.empty();
-
-//   if (items.length === 0) {
-//     // No errors → hide the summary and clear heading
-//     $sum.find('> h2').text('');
-//     $sum.hide();
-//     try { focused.focus(); } catch(e) {}
-//     return;
-//   }
-
-//   // Repopulate with current errors
-//   items.forEach(function (it) {
-//     var $a = $('<a/>', {
-//       href: '#' + it.id + '_label',
-//       onclick: 'javascript:scrollToAndFocus("' + it.id + '_label","' + it.id + '"); return false;',
-//       text: it.msg
-//     });
-//     $ul.append($('<li/>').append($a));
-//   });
-
-//   var n = items.length;
-//   $sum.find('> h2').text(
-//     currentLang === 'en'
-//       ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-//       : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-//   );
-
-//   $sum.find('a').css('text-decoration', 'underline');
-//   $sum.blur().show();
-//   try { focused.focus(); } catch(e) {}
-// }, 250);
-
-//   }
-
-//   return true;
-
 function globalEvaluationFunction() {
   // Re-entrancy guard: prevent tight loops when renderer indirectly retriggers validation
   if (globalEvaluationFunction._busy) return true;
@@ -236,6 +120,13 @@ function globalEvaluationFunction() {
 
     // Ignore PP's hidden file validators (both ..._hidden_* and ...hidden_*)
     if (/_hidden_(filename|filetype|file_size)$/i.test(id) || /(hidden_)(filename|filetype|file_size)$/i.test(id)) {
+      // Treat the stock hidden file validators as always valid and invisible.
+      // They’re replaced by our custom file validators.
+      v.isvalid = true;
+      if (v.style) {
+        // Make sure they don't show anything on screen
+        v.style.display = 'none';
+      }
       continue;
     }
 
@@ -252,24 +143,29 @@ function globalEvaluationFunction() {
 
     var inferredType = v.type || (
       (document.getElementById(base + '_datepicker_description') || document.getElementById(base + '_datepicker')) ? 'date' :
-      (document.getElementById(base + '_timepicker_description') || document.getElementById(base + '_timepicker')) ? 'time' :
-      ($('#' + base).is('select') ? 'lookup' : '')
+        (document.getElementById(base + '_timepicker_description') || document.getElementById(base + '_timepicker')) ? 'time' :
+          ($('#' + base).is('select') ? 'lookup' : '')
     );
 
     items.push({ id: base, type: inferredType, msg: msg });
   }
+  // 2b) Align Page_IsValid with the visible WET errors
+  window.Page_IsValid = (items.length === 0);
 
   // 3) Repaint inline (single message per field)
   for (var k = 0; k < items.length; k++) {
     updateLabelErrorMessage(items[k].id, items[k].type, items[k].msg);
   }
 
-  // 4) Rebuild the summary list to exactly match the de-duped items
+// 4) Rebuild the summary list to exactly match the de-duped items
   setTimeout(function () {
     var focused = $(':focus');
     var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
+    // A11y: ensure the UL keeps its native list semantics
+    // Some templates add role="presentation" which hides list semantics from AT.
+    $ul.removeAttr('role');
     // Always clear current list
     $ul.empty();
 
@@ -277,7 +173,7 @@ function globalEvaluationFunction() {
       // No errors → hide the summary and clear heading
       $sum.find('> h2').text('');
       $sum.hide();
-      try { focused.focus(); } catch (e) {}
+      try { focused.focus(); } catch (e) { }
       return;
     }
 
@@ -295,14 +191,63 @@ function globalEvaluationFunction() {
     $sum.find('> h2').text(
       currentLang === 'en'
         ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-        : "Le formulaire n'a pu être soumis car " + n + ' erreur' + (n > 1 ? "s ont été trouvées." : " a été trouvée.")
+        : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+          (n > 1 ? "s ont été trouvées." : " a été trouvée.")
     );
 
     $sum.find('a').css('text-decoration', 'underline');
-    $sum.blur().show();
-    try { focused.focus(); } catch (e) {}
+    $sum.show();
+    if (!$sum.attr('tabindex')) $sum.attr('tabindex', '-1'); // a11y guard
+
+    // NEW: when a submit just failed, do NOT move focus into the summary.
+    // Instead, scroll it into view and blur the current element so that the
+    // *next* Tab goes to the first focusable element (Skip to main content).
+    var suppress = (window.__suppressSummaryFocusUntil && Date.now() < window.__suppressSummaryFocusUntil);
+    var wantFocus = (window.__validators_focusSummaryNow === true) && !suppress && $sum.is(':visible');
+    if (wantFocus) {
+       // Scroll the *page* to the very top so that the first Tab
+      // will encounter the "Skip to main content" link.
+      try {
+        if (typeof window.scrollTo === 'function') {
+          window.scrollTo(0, 0);  // top-left
+        } else {
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+        }
+      } catch (e) {
+        // ignore scroll errors
+      }
+
+      // Blur the current element so the next Tab starts from the top of the page
+      setTimeout(function () {
+        try {
+          var active = document.activeElement;
+          if (active &&
+              active !== document.body &&
+              active !== document.documentElement &&
+              typeof active.blur === 'function') {
+            active.blur();
+          }
+        } catch (e) {
+          // ignore focus errors
+        }
+      }, 0);
+      window.__validators_focusSummaryNow = false; // consume one-shot flag
+    }
+
   }, 250);
 
+  // Derive Page_IsValid purely from the errors we actually show.
+  var hasErrors = items && items.length > 0;
+
+  // Make ASP.NET + reCAPTCHA agree with the WET summary
+  window.Page_IsValid = !hasErrors;
+
+  // Optional: keep Page_BlockSubmit in sync if anything else uses it
+  if (typeof window.Page_BlockSubmit !== "undefined") {
+    window.Page_BlockSubmit = hasErrors;
+  }
+  
   return true;
 }
 
@@ -331,6 +276,7 @@ function createGlobalValidator() {
 // Updates the label's error messages as per WET accessibility requirements
 // PRIVATE
 function updateLabelErrorMessage(id, type, message) {
+  console.log('[WET-PP] updateLabelErrorMessage → SET error', { id, type, message });
   const $field = getFocusableField(id, type);
   const $label = $('#' + id + '_label');
 
@@ -370,26 +316,38 @@ function updateLabelErrorMessage(id, type, message) {
   $label.find('br + br').remove();
 }
 
-// Clears inline error + red frame for a single field
-// PRIVATE
+// // Clears inline error + red frame for a single field
+// // PRIVATE
 function clearFieldErrorUI(id, type) {
-  const $field = getFocusableField(id, type);
-  const $label = $('#' + id + '_label');
+  console.log('[WET-PP] clearFieldErrorUI → CLEAR error', { id, type });
 
-  $field.removeClass('error')
-        .attr('aria-invalid', 'false');  // a11y state
+  var $field = getFocusableField(id, type);
+  if ($field.length) {
+    // Remove BOTH our error classes and aria-invalid
+    $field
+      .removeClass("error input-validation-error")
+      .removeAttr("aria-invalid");
 
-  // Remove inline error + any preceding <br>
-  const $err = $label.find('#' + id + '_err');
-  if ($err.length) {
-    const $prev = $err.prev();
-    $err.remove();
-    if ($prev.is('br')) $prev.remove();
+    $field
+      .closest(".form-control-cell, .cell")
+      .removeClass("has-error error");
   }
 
-  // If your theme adds error classes on wrappers, clear them too (safe no-ops otherwise)
-  $field.closest('.form-group, .cell, .control').removeClass('error has-error');
+  var $label = $("#" + id + "_label");
+  if ($label.length) {
+    // Inline error span is created as <span id="FIELDID_err" ...>
+    var $err = $label.find("#" + id + "_err");
+    if ($err.length) {
+      // Remove the <br> directly before that span, if present
+      var $prev = $err.prev();
+      $err.remove();
+      if ($prev.is("br")) {
+        $prev.remove();
+      }
+    }
+  }
 }
+
 
 // Helper: resolve the real, focusable control for a given field/type
 // PRIVATE
@@ -473,18 +431,172 @@ function getCompositeDateTimeValue(baseId) {
 // If the validity status has not changed, no further updates are applied.
 //
 // PRIVATE
+// function updatesOnChange(o, evt) {
+//   var id = o.id;
+//   var type = o.type;
+  
+//   // NEW: per-field reentrancy guard (coalesce bursts: keyup+input+change etc.)
+//   updatesOnChange._busy = updatesOnChange._busy || {};
+//   if (updatesOnChange._busy[id]) return;
+//   updatesOnChange._busy[id] = true;
+
+//   try {
+//     if (typeof removeDuplicateInlineErrors === 'function') {
+//       removeDuplicateInlineErrors(id);
+//     }
+
+//     // IMPORTANT: declare matching at function scope so it's always defined
+//     var matching = [];
+
+//     // Defensive: no validators? nothing to do
+//     var pv = window.Page_Validators || [];
+//     if (!Array.isArray(pv) || pv.length === 0) return;
+
+//     // find all validators attached to this logical field (PP defaults + custom)
+//     var targets = [id];
+//     if (type === 'lookup') {
+//       targets.push(id + '_name', id + '_value', id + '_entityname', id + '_text');
+//     }
+//     // Include native input + PP hidden partners so we can neutralize them
+//     if (type === 'file') {
+//       targets.push(
+//         id + '_input_file',
+//         id + '_hidden_filename',
+//         id + '_hidden_filetype',
+//         id + '_hidden_file_size'
+//       );
+//     }
+
+//     matching = pv
+//       .map(function (v, i) { return { v: v, i: i }; })
+//       .filter(function (e) { return targets.indexOf(e.v.controltovalidate) !== -1; });
+
+//     if (matching.length === 0) {
+//       matching = pv
+//         .map(function (v, i) { return { v: v, i: i }; })
+//         .filter(function (e) { return e.v.controltovalidate === id; });
+//     }
+
+//     if (matching.length === 0) return;
+
+//     var anyValidityChanged = false;
+
+//     matching.forEach(function (pair) {
+//       var v = pair.v;
+//       var was = !!v.isvalid;
+//       try {
+//         if (typeof window.ValidatorValidate === "function") {
+//           window.ValidatorValidate(v);
+//         } else if (typeof v.evaluationfunction === "function") {
+//           v.isvalid = !!v.evaluationfunction(v);
+//         } else if (typeof v.clientvalidationfunction === "string" &&
+//           typeof window[v.clientvalidationfunction] === "function") {
+//           v.isvalid = !!window[v.clientvalidationfunction](v);
+//         }
+//       } catch (e) { /* ignore */ }
+//       if (was !== !!v.isvalid) anyValidityChanged = true;
+//     });
+
+//     // ---------- FILE BRIDGE HARDENING (authoritative) ----------
+//     // If the special bridge validator for this base is valid, force the
+//     // rest of the field’s validators (including PP hidden ones) to valid,
+//     // so inline clears cleanly and Page_IsValid is accurate.
+//     if (type === 'file') {
+//       var bridgePair = matching.find(function (p) {
+//         try { return p.v && typeof p.v.id === 'string' && /_FileBridge_/i.test(p.v.id); }
+//         catch (_) { return false; }
+//       });
+//       if (bridgePair && bridgePair.v.isvalid === true) {
+//         matching.forEach(function (p) {
+//           if (p !== bridgePair) {
+//             p.v.isvalid = true;
+//             try { p.v.errormessage = ''; } catch (_) { }
+//           }
+//         });
+//         anyValidityChanged = true;
+//       }
+//     }
+//     // ---------- /FILE BRIDGE HARDENING ----------
+
+//     // global page validity refresh
+//     ValidatorUpdateIsValid();
+
+//     // If the field is invalid but nothing “changed” (e.g., duplicate state),
+//     // force a repaint so the inline error shows up during typing/clearing.
+//     if (!anyValidityChanged) {
+//       var currentlyInvalid = matching.some(function (pair) { return pair.v.isvalid === false; });
+//       var hasInline = $('#' + id + '_label').find("span[id='" + id + "_err']").length > 0;
+//       if (currentlyInvalid && !hasInline) {
+//         anyValidityChanged = true;
+//       }
+//     }
+
+//     // If all validators for this field are now valid → clear its inline UI.
+//     var allValidForField = matching.every(function (pair) { return pair.v.isvalid !== false; });
+//     if (allValidForField) {
+//       clearFieldErrorUI(id, type);
+//     }
+
+//     // Always refresh the summary after any user-facing change, once validators are active.
+//     if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+//       setTimeout(globalEvaluationFunction, 0);
+//     }
+
+//     // Re-fire a bubbling change only for real user actions (keeps PP logic in sync)
+//     if (evt && evt.isTrusted) {
+//       setTimeout(function () {
+//         var elId = id;
+
+//         if (type === "date") {
+//           elId = id + "_datepicker_description";
+//         } else if (type === "lookup") {
+//           var el = document.getElementById(id);
+//           elId = (el && el.tagName === "SELECT")
+//             ? id
+//             : (document.getElementById(id + "_name") ? id + "_name" : id);
+//         } else if (type === "time") {
+//           if (document.getElementById(id + "_timepicker_description")) {
+//             elId = id + "_timepicker_description";
+//           } else if (document.getElementById(id + "_timepicker")) {
+//             elId = id + "_timepicker";
+//           } else if (document.getElementById(id + "_datepicker_description")) {
+//             elId = id + "_datepicker_description";
+//           } else {
+//             var back = document.getElementById(id);
+//             var cell = back && back.closest ? back.closest(".form-control-cell") : null;
+//             var isTO = !!(cell && cell.querySelector('.input-group[data-pp-time-only="1"]'));
+//             if (isTO) return;
+//             elId = id;
+//           }
+//         } else {
+//           elId = id;
+//         }
+
+//         var field = document.getElementById(elId);
+//         if (!field) return;
+//         var evt2 = new Event("change", { bubbles: true, cancelable: true });
+//         evt2.synthetic = true;
+//         field.dispatchEvent(evt2);
+//       }, 0);
+//     }
+
+//   } finally {
+//     updatesOnChange._busy[id] = false;
+//   }
+// }
+// The field change event handler.
+// Finds all validators for the field using its id in Page_Validators.
+// Checks the validity status of the field before and after each validator is executed.
+// If the validity status has changed then the field's error label and the summary DIV get updated.
+// The Page_IsValid field is updated by calling the PP function ValidatorUpdateIsValid.
+// The Summary DIV is updated by globalEvaluationFunction.
+//
+// If the validity status has not changed, no further updates are applied.
+//
+// PRIVATE
 function updatesOnChange(o, evt) {
   var id = o.id;
   var type = o.type;
-
-  // Keep PP validators in sync: copy composite (date [+ time]) into the backing field
-  if (type === 'date' || type === 'time') {
-    var back = document.getElementById(id);
-    if (back) {
-      var v = getCompositeDateTimeValue(id);
-      if (back.value !== v) back.value = v;
-    }
-  }
 
   // NEW: per-field reentrancy guard (coalesce bursts: keyup+input+change etc.)
   updatesOnChange._busy = updatesOnChange._busy || {};
@@ -492,8 +604,25 @@ function updatesOnChange(o, evt) {
   updatesOnChange._busy[id] = true;
 
   try {
+    // -------- DEBUG: entry --------
+    try {
+      console.log('[WET-PP] updatesOnChange:start', {
+        id: id,
+        type: type,
+        evtType: evt && evt.type,
+        evtIsTrusted: evt && evt.isTrusted,
+        value: (o && (typeof o.value !== 'undefined' ? o.value : o.textContent)),
+        active: window.__validators_active,
+        Page_IsValid: (typeof window.Page_IsValid !== 'undefined' ? window.Page_IsValid : undefined)
+      });
+    } catch (e) { /* ignore debug errors */ }
+
     if (typeof removeDuplicateInlineErrors === 'function') {
-      removeDuplicateInlineErrors(id);
+      try {
+        removeDuplicateInlineErrors(id);
+      } catch (e) {
+        console.log('[WET-PP] updatesOnChange: removeDuplicateInlineErrors error', { id: id }, e && e.message);
+      }
     }
 
     // IMPORTANT: declare matching at function scope so it's always defined
@@ -501,80 +630,213 @@ function updatesOnChange(o, evt) {
 
     // Defensive: no validators? nothing to do
     var pv = window.Page_Validators || [];
-    if (!Array.isArray(pv) || pv.length === 0) return;
+    try {
+      console.log('[WET-PP] updatesOnChange: Page_Validators check', {
+        id: id,
+        hasArray: Array.isArray(pv),
+        count: Array.isArray(pv) ? pv.length : undefined
+      });
+    } catch (e) { /* ignore debug */ }
+
+    if (!Array.isArray(pv) || pv.length === 0) {
+      try {
+        console.log('[WET-PP] updatesOnChange: no Page_Validators, abort', { id: id });
+      } catch (e) { }
+      return;
+    }
 
     // find all validators attached to this logical field (PP defaults + custom)
     var targets = [id];
-    if (type === 'date') {
-      targets.push(id + '_datepicker_description', id + '_datepicker');
-    }
     if (type === 'lookup') {
       targets.push(id + '_name', id + '_value', id + '_entityname', id + '_text');
     }
+    // Include native input + PP hidden partners so we can neutralize them
     if (type === 'file') {
-      targets.push(id + '_input_file');
-    }
-    if (type === 'time') {
-      targets.push(id + '_timepicker_description', id + '_timepicker');
+      targets.push(
+        id + '_input_file',
+        id + '_hidden_filename',
+        id + '_hidden_filetype',
+        id + '_hidden_file_size'
+      );
     }
 
     matching = pv
       .map(function (v, i) { return { v: v, i: i }; })
-      .filter(function (e) { return targets.indexOf(e.v.controltovalidate) !== -1; });
+      .filter(function (e) {
+        return e.v && targets.indexOf(e.v.controltovalidate) !== -1;
+      });
 
     if (matching.length === 0) {
       matching = pv
         .map(function (v, i) { return { v: v, i: i }; })
-        .filter(function (e) { return e.v.controltovalidate === id; });
+        .filter(function (e) {
+          return e.v && e.v.controltovalidate === id;
+        });
     }
 
-    if (matching.length === 0) return;
+    if (matching.length === 0) {
+      try {
+        console.log('[WET-PP] updatesOnChange: no matching validators for field', { id: id, type: type });
+      } catch (e) { }
+      return;
+    }
+
+    // DEBUG: list matching validators for this field
+    try {
+      console.log('[WET-PP] updatesOnChange: matching validators', {
+        id: id,
+        type: type,
+        count: matching.length,
+        validators: matching.map(function (pair) {
+          return {
+            idx: pair.i,
+            vid: pair.v && pair.v.id,
+            ctl: pair.v && pair.v.controltovalidate,
+            isvalid: pair.v && pair.v.isvalid
+          };
+        })
+      });
+    } catch (e) { }
 
     var anyValidityChanged = false;
 
+    // Run each validator and log before/after state
     matching.forEach(function (pair) {
       var v = pair.v;
-      var was = !!v.isvalid;
+      var was = !!(v && v.isvalid);
+
+      try {
+        console.log('[WET-PP] updatesOnChange: validator-before', {
+          id: id,
+          type: type,
+          idx: pair.i,
+          vid: v && v.id,
+          ctl: v && v.controltovalidate,
+          was: was
+        });
+      } catch (e) { }
+
       try {
         if (typeof window.ValidatorValidate === "function") {
           window.ValidatorValidate(v);
-        } else if (typeof v.evaluationfunction === "function") {
+        } else if (v && typeof v.evaluationfunction === "function") {
           v.isvalid = !!v.evaluationfunction(v);
-        } else if (typeof v.clientvalidationfunction === "string" &&
+        } else if (v && typeof v.clientvalidationfunction === "string" &&
           typeof window[v.clientvalidationfunction] === "function") {
           v.isvalid = !!window[v.clientvalidationfunction](v);
         }
-      } catch (e) { /* ignore */ }
-      if (was !== !!v.isvalid) anyValidityChanged = true;
+      } catch (e) {
+        console.log('[WET-PP] updatesOnChange: validator exception', {
+          id: id,
+          type: type,
+          idx: pair.i,
+          vid: v && v.id
+        }, e && e.message);
+      }
+
+      var now = !!(v && v.isvalid);
+      try {
+        console.log('[WET-PP] updatesOnChange: validator-after', {
+          id: id,
+          type: type,
+          idx: pair.i,
+          vid: v && v.id,
+          ctl: v && v.controltovalidate,
+          was: was,
+          now: now
+        });
+      } catch (e) { }
+
+      if (was !== now) anyValidityChanged = true;
     });
+
+    // ---------- FILE BRIDGE HARDENING (authoritative) ----------
+    // If the special bridge validator for this base is valid, force the
+    // rest of the field’s validators (including PP hidden ones) to valid,
+    // so inline clears cleanly and Page_IsValid is accurate.
+    if (type === 'file') {
+      try {
+        var bridgePair = matching.find(function (p) {
+          try { return p.v && typeof p.v.id === 'string' && /_FileBridge_/i.test(p.v.id); }
+          catch (_) { return false; }
+        });
+        if (bridgePair && bridgePair.v.isvalid === true) {
+          console.log('[WET-PP] updatesOnChange: file bridge authoritative valid, forcing others valid', { id: id });
+          matching.forEach(function (p) {
+            if (p !== bridgePair && p.v) {
+              p.v.isvalid = true;
+              try { p.v.errormessage = ''; } catch (_) { }
+            }
+          });
+          anyValidityChanged = true;
+        }
+      } catch (e) {
+        console.log('[WET-PP] updatesOnChange: file bridge hardening error', { id: id }, e && e.message);
+      }
+    }
+    // ---------- /FILE BRIDGE HARDENING ----------
 
     // global page validity refresh
     ValidatorUpdateIsValid();
+    try {
+      console.log('[WET-PP] updatesOnChange: ValidatorUpdateIsValid done', {
+        id: id,
+        type: type,
+        Page_IsValid: (typeof window.Page_IsValid !== 'undefined' ? window.Page_IsValid : undefined)
+      });
+    } catch (e) { }
 
     // If the field is invalid but nothing “changed” (e.g., duplicate state),
     // force a repaint so the inline error shows up during typing/clearing.
     if (!anyValidityChanged) {
-      var currentlyInvalid = matching.some(function (pair) { return pair.v.isvalid === false; });
+      var currentlyInvalid = matching.some(function (pair) { return pair.v && pair.v.isvalid === false; });
       var hasInline = $('#' + id + '_label').find("span[id='" + id + "_err']").length > 0;
+      try {
+        console.log('[WET-PP] updatesOnChange: invalidState', {
+          id: id,
+          type: type,
+          anyValidityChanged: anyValidityChanged,
+          currentlyInvalid: currentlyInvalid,
+          hasInline: hasInline
+        });
+      } catch (e) { }
       if (currentlyInvalid && !hasInline) {
         anyValidityChanged = true;
       }
     }
 
     // If all validators for this field are now valid → clear its inline UI.
-    var allValidForField = matching.every(function (pair) { return pair.v.isvalid !== false; });
+    var allValidForField = matching.every(function (pair) { return !pair.v || pair.v.isvalid !== false; });
+    try {
+      console.log('[WET-PP] updatesOnChange: allValidForField', {
+        id: id,
+        type: type,
+        allValidForField: allValidForField
+      });
+    } catch (e) { }
+
     if (allValidForField) {
+      try {
+        console.log('[WET-PP] updatesOnChange: calling clearFieldErrorUI', { id: id, type: type });
+      } catch (e) { }
       clearFieldErrorUI(id, type);
     }
 
     // Always refresh the summary after any user-facing change, once validators are active.
     if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+      try {
+        console.log('[WET-PP] updatesOnChange: scheduling summary refresh', { id: id, type: type });
+      } catch (e) { }
       setTimeout(globalEvaluationFunction, 0);
     }
 
     // Re-fire a bubbling change only for real user actions (keeps PP logic in sync)
     if (evt && evt.isTrusted) {
       setTimeout(function () {
+        try {
+          console.log('[WET-PP] updatesOnChange: re-firing synthetic change', { id: id, type: type });
+        } catch (e) { }
+
         var elId = id;
 
         if (type === "date") {
@@ -612,127 +874,61 @@ function updatesOnChange(o, evt) {
 
   } finally {
     updatesOnChange._busy[id] = false;
+    try {
+      console.log('[WET-PP] updatesOnChange:end', { id: id, type: type });
+    } catch (e) { }
   }
 }
 
-// PRIVATE
-//
-// Adds and Removes change events. Added when the validators are enabled which is after the first submit.
-//
+
+// Attaches per-field change/input handlers AFTER first submit activation.
+// - No PP date/time wrappers used; works with native type="date"/"time"
+// - File branch triggers your file pipeline + keeps PP stock UI suppressed
 function addChangeEvents(id, type) {
-  const handler = updatesOnChange.bind(null, { id, type });
-  const $f = getFocusableField(id, type);
+  if (!id) return;
+  type = (type || (document.getElementById(id)?.getAttribute('type') || '')).toLowerCase();
 
-  // Unhook EVERYTHING for our namespace before re-hooking (idempotent)
-  $f.off('.vchg');
-  $('#' + id).off('.vchg');
-  $('#' + id + '_name').off('.vchg');
-  $('#' + id + '_input_file').off('.vchg');
+ 
+  function _run(id, type, e) {
+  _suppressSummaryFocus(1200); // <- NEW: prevent summary focus for ~1.2s
+  try { updatesOnChange({ id: id, type: type }, e || new Event('synthetic')); } catch (_) {}
+  if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+    try { globalEvaluationFunction(); } catch (_) {}
+  }
+}
 
-  const $dpTop = $f.closest('.datetimepicker');
-  if ($dpTop.length) $dpTop.off('.vchg');
-  $f.siblings('.input-group-addon, .add-on, .btn').off('.vchg');
+  // Generic (text, number, date, time, textarea, select/lookup)
+  if (type !== 'file') {
+    const $el = $('#' + id);
+    $el.off('.vchg').on('change.vchg input.vchg blur.vchg', function (e) {
+      _run(id, type, e);
+    });
+    return;
+  }
 
-  // Baseline (covers typing/paste/IME) — non date/time only
-  if (type !== 'date' && type !== 'time') {
-    // Add compositionend for IME; add keydown Backspace/Delete fallback
-    $f.on('change.vchg input.vchg keyup.vchg paste.vchg blur.vchg compositionend.vchg', handler)
-      .on('keydown.vchg', function(e){
-        if (e.key === 'Backspace' || e.key === 'Delete') {
-          setTimeout(() => handler(e), 0);
+  // FILE branch
+  const $fin = $('#' + id + '_input_file'); // PP native file input lives here
+
+  // FILE branch
+  $fin.off('.vchg').on('change.vchg input.vchg blur.vchg', function (e) {
+    _suppressSummaryFocus(1200); // <- NEW
+    try { queueFileValidation(id, 'file', e); } catch (_) { }
+    try { window.FileStockSuppression && window.FileStockSuppression.register(id); } catch (_) { }
+    if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+      try { globalEvaluationFunction(); } catch (_) { }
+    }
+  });
+
+  // Optional: also re-validate when the PP delete button is clicked (idempotent delegate)
+  $(document).off('click.fileDelete.' + id)
+    .on('click.fileDelete.' + id, '#' + id + '_delete_button', function () {
+      setTimeout(function () {
+        try { queueFileValidation(id, 'file', { isTrusted: true }); } catch (_) {}
+        if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+          try { globalEvaluationFunction(); } catch (_) {}
         }
-      });
-
-    // If the focusable partner is not the raw element, mirror bindings on the raw base input too
-    if ($f.length && $f.attr('id') !== id) {
-      const $raw = $('#' + id);
-      if ($raw.length) {
-        $raw.off('.vchg')
-            .on('change.vchg input.vchg keyup.vchg paste.vchg blur.vchg compositionend.vchg', handler)
-            .on('keydown.vchg', function(e){
-              if (e.key === 'Backspace' || e.key === 'Delete') {
-                setTimeout(() => handler(e), 0);
-              }
-            });
-      }
-    }
-  }
-
-  if (type === 'lookup') {
-    const $sel  = $('#' + id);
-    const $name = $('#' + id + '_name');
-    if ($sel.length) {
-      $sel.on('change.vchg', handler)
-          .on('select2:select.vchg select2:unselect.vchg select2:clear.vchg', handler);
-    }
-    if ($name.length) {
-      $name.on('change.vchg input.vchg keyup.vchg paste.vchg blur.vchg autocompleteselect.vchg autocompletechange.vchg', handler);
-    }
-  }
-
-  if (type === 'date' || type === 'time') {
-    const $dateUI = $(`#${id}_datepicker_description, #${id}_datepicker`);
-    const $timeUI = $(`#${id}_timepicker_description, #${id}_timepicker`);
-    const $dp     = $dateUI.closest('.datetimepicker');
-
-    const isTimeOnlyGroup =
-      $('#' + id).closest('.form-control-cell')
-                 .find('.input-group[data-pp-time-only="1"]').length > 0;
-
-    const mirror = () => { $('#' + id).val(getCompositeDateTimeValue(id)); };
-
-    if ($dp.length) {
-      $dp.off('.vchg').on('dp.change.vchg', function (e) {
-        mirror(); handler(e);
-      });
-    }
-
-    $dateUI.add($timeUI)
-      .off('.vchg')
-      .on('input.vchg keyup.vchg paste.vchg change.vchg blur.vchg compositionend.vchg', function (e) {
-        mirror();
-        if (!isTimeOnlyGroup) { $('#' + id).trigger('change'); }
-        handler(e);
-      });
-
-    $('#' + id).off('.vchg').on('change.vchg input.vchg', handler);
-  }
-
-  // Programmatic setter patch — dispatch BOTH input and change
-  (function patchValueSetter(el){
-    try {
-      if (!el || el.__emitOnSet) return;
-      const proto = Object.getPrototypeOf(el) || HTMLInputElement.prototype;
-      const desc  = Object.getOwnPropertyDescriptor(proto, 'value') ||
-                    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-      if (!desc || !desc.configurable) return;
-      Object.defineProperty(el, 'value', {
-        get: function(){ return desc.get.call(this); },
-        set: function(v){
-          const old = desc.get.call(this);
-          desc.set.call(this, v);
-          if (v !== old) {
-            const ev1 = new Event('input',  { bubbles: true, cancelable: true });
-            ev1.synthetic = true;
-            this.dispatchEvent(ev1);
-            const ev2 = new Event('change', { bubbles: true, cancelable: true });
-            ev2.synthetic = true;
-            this.dispatchEvent(ev2);
-          }
-        }
-      });
-      el.__emitOnSet = true;
-    } catch(e) { /* no-op */ }
-  })(document.getElementById(id));
-
-  if (type === 'file') {
-    const $fin = $('#' + id + '_input_file');
-    $fin.off('.vchg')
-      .on('change.vchg input.vchg', function (e) {
-        queueFileValidation(id, type, e);
-        window.FileStockSuppression && window.FileStockSuppression.register(id);
-      });
-  }
+      }, 0);
+    });
 }
 
 // PRIVATE
@@ -799,8 +995,13 @@ function _addValidator(id, type, validator) {
     } else {
         Page_Validators.push(newValidator);
     }
+
 }
 
+// --- focus suppression helper (used for on-change/blur runs) ---
+function _suppressSummaryFocus(ms) {
+  window.__suppressSummaryFocusUntil = Date.now() + (ms || 1000);
+}
 
 
 ///////////////////////////////////////////////////////////
@@ -829,91 +1030,100 @@ function _addValidator(id, type, validator) {
 
 var __validators_active = false;
 
-function addValidators(fields) {
-    if (!fields || !Array.isArray(fields))
-        return;
+// One-time activation of live change/blur handlers for all fields
+function ensureLiveChangeHandlers() {
+  // Guard so we only wire things once
+  if (window.__validators_liveHandlersAttached) return;
+  window.__validators_liveHandlersAttached = true;
 
-    // add a custom handler to the form submit to add the validators after the first submit
-    // if there are no errors, navigation proceeds. if there are errors they must first be cleared.
+  // Mark validators as "active" from now on
+  window.__validators_active = __validators_active = true;
 
-    // The Page_Validators are is checked and not the fields array because validators may have been added or removed
-  // dynamically.
-  $('#NextButton').off('.bindV').on('click.bindV', e => {
-    __validators_active = true;
-    window.__validators_active = true;  // Expose globally for delete handler
+  const seen = new Set();
+  const pv = window.Page_Validators || [];
 
-    const seen = new Set();
-    Page_Validators.forEach(v => {
-      const id = v.controltovalidate;
-      if (!id || seen.has(id)) return;
+  pv.forEach(function (v) {
+    const id = v && v.controltovalidate;
+    if (!id || seen.has(id)) return;
 
-      // derive type if not present (helps dates)
-      const type = v.type
-        || ($('#' + id + '_timepicker_description').length ? 'time'
-          : ($('#' + id + '_datepicker_description').length ? 'date' : ''));
+    // Derive a stable logical type
+    let type = (v.type || (document.getElementById(id)?.getAttribute('type') || '')).toLowerCase();
+    if (type === 'select-one' || type === 'select') type = 'lookup';
+    if (type === 'file') type = 'file';
+
+    try {
       addChangeEvents(id, type);
-      seen.add(id);
-    });
-    // Final pre-submit sweep: ensure all date/time backers have the composite value
-    $('.form-control-cell .input-group.datetimepicker:not([data-pp-time-only="1"]) input[id$="_datepicker_description"]:not([data-pp-as-time="1"])').each(function () {
-      var baseId = this.id.replace(/_(date|time)picker(?:_description)?$/, '');
-      // mirror "date [+ time]" into the single backing input PP validates
-      $('#' + baseId).val(getCompositeDateTimeValue(baseId));
-      // run your pipeline once so inline UI + summary reflect final state
-      updatesOnChange({ id: baseId, type: 'date' }, { isTrusted: true }); // 'date' is fine for datetime too
+    } catch (e) {
+      // keep going even if one field misbehaves
+      console.log('[WET-PP] ensureLiveChangeHandlers: addChangeEvents failed for', id, e && e.message);
+    }
+    seen.add(id);
+  });
+
+  // move this to Page_ClientValidate via the global validator.
+  // Immediately repaint summary/inline errors based on current validity
+  // if (typeof globalEvaluationFunction === 'function') {
+  //   try { globalEvaluationFunction(); } catch (e) {
+  //     console.log('[WET-PP] ensureLiveChangeHandlers: globalEvaluationFunction error', e && e.message);
+  //   }
+  // }
+}
+
+ // Registers custom validators but does not attach live change handlers
+// until the first "Next" click (quiet-until-first-submit).
+function addValidators(fields) {
+  if (!Array.isArray(fields) || fields.length === 0) return;
+
+  // Activate validators on first Next click (quiet-until-first-submit)
+  $('#NextButton').off('.bindV').on('click.bindV', function () {
+    // Coming from a real Next click -> it is OK for the summary
+    // to be considered as a potential focus target on this submit.
+    window.__validators_focusSummaryNow = true;
+    ensureLiveChangeHandlers();
+  });
+  // Keep validation summary keyboard reachable (unchanged behaviour)
+  var $summary = $('#ValidationSummaryEntityFormView');
+  if (!$summary.attr('tabindex')) $summary.attr('tabindex', '-1'); // 
+
+  // A11y: ensure any UL in the summary is not role="presentation"
+  $summary.find('ul[role="presentation"]').removeAttr('role');
+
+  // Register each field's validators (no live change handlers yet)
+  fields.forEach(function (field) {
+    const id = field && field.id;
+    if (!id) return;
+
+    // Prefer explicit type in config; otherwise read the native input's type attribute
+    const type = (field.type || (document.getElementById(id)?.getAttribute('type') || '')).toLowerCase();
+
+    if (field.required) addAccessibilityMods(id);
+
+    (field.validators || []).forEach(function (v) {
+      _addValidator(id, type, v);
     });
   });
 
-    // make summary div focusable
-    var summary = $('#ValidationSummaryEntityFormView');
-    if (!summary.attr('tabindex')) {
-        summary.attr('tabindex', '-1');
-    }
-
-
-    fields.forEach(field => {
-        var id = field.id;
-        if (!id)
-            return;
-
-        var required = field.required || false;
-
-        var type = field.type || "";
-
-        // add accessibility modifications
-        if (required)
-            addAccessibilityMods(id);
-
-
-        // add field validators
-        field.validators.forEach(v => {
-            _addValidator(id, type, v);
-        });
-
-    });
-
-    // Add global validator last
+  // Ensure the global painter runs last (your numbering + repaint pipeline)
+  if (typeof createGlobalValidator === 'function') {
     Page_Validators.push(createGlobalValidator());
+  }
 
-    // Delegated click handler for file delete buttons
-    // Revalidates file fields immediately after delete (post-first-submit)
-    $(document).off('click.fileDelete').on('click.fileDelete', 'button[id$="_delete_button"]', function() {
-        // Derive baseId from button id (strip _delete_button suffix)
-        var buttonId = this.id || '';
-        var baseId = buttonId.replace(/_delete_button$/, '');
-        if (!baseId) return;
+  // Delegate: when a PP "Delete" button is clicked for a file field,
+  // let PP update hidden inputs, then revalidate the logical file field.
+  $(document)
+    .off('click.fileDelete')
+    .on('click.fileDelete', 'button[id$="_delete_button"]', function () {
+      const baseId = String(this.id || '').replace(/_delete_button$/, '');
+      if (!baseId) return;
 
-        // Run after deleteFile(...) updates the DOM/hidden fields
-        setTimeout(function() {
-            // Revalidate the file field
-            queueFileValidation(baseId, 'file', { isTrusted: true });
-
-            // If validators have been activated (after first submit), refresh summary
-            if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
-                globalEvaluationFunction();
-            }
-        }, 0);
-    });
+      // Run after PP DOM/hidden fields settle
+      setTimeout(function () {
+        queueFileValidation(baseId, 'file', { isTrusted: true });
+        if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
+          globalEvaluationFunction();
+        }
+      }, 0);
+    }); // pattern retained from your prior version
 }
 
 // Removes the custom validators for the field with the supplied id
@@ -962,276 +1172,6 @@ function addValidator(field) {
     });
 }
 
-// Date field enhancer – Power Pages picker (no WET, no native picker)
-(function ($) {
-  $(function () {
-    var sel = '.form-control-cell .input-group.datetimepicker input[id$="_datepicker_description"]';
-
-    $(sel).each(function () {
-      var $ui    = $(this);                                // visible input
-      var baseId = this.id.replace(/_datepicker_description$/, '');
-      var $back  = $('#' + baseId);                        // backing input
-
-      // Keep backing input for submit; hide from AT/tab
-      $back.attr({ 'aria-hidden': 'true', 'tabindex': '-1' });
-
-      // Mirror 'required' to the visible control for AT
-      if ($back.prop('required')) $ui.attr('required', 'required');
-
-      // We rely on the PP datepicker; keep TEXT input (no native icon)
-      $ui.attr({
-        type: 'text',
-        inputmode: 'numeric',
-        pattern: '\\d{4}-\\d{2}-\\d{2}',
-        lang: (document.documentElement.lang || 'en').toLowerCase()
-      });
-      $ui[0].removeAttribute('placeholder');
-
-      // Keep backing value in sync as user types/picks
-      $ui.off('.datex').on('input.datex change.datex', function () {
-        $back.val(this.value);
-      });
-
-      // Bilingual, keyboardable outer icon — DO NOT override its click
-      var $btn = $ui.closest('.input-group.datetimepicker')
-                    .find('.input-group-addon,[role="button"]').first();
-
-      if ($btn.length) {
-        var lang  = (document.documentElement.lang || 'en').toLowerCase();
-        var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-
-        // Clean ARIA (we don’t open our own popup; PP does)
-        $btn.attr({ title: label, 'aria-label': label, 'aria-haspopup': 'false', tabindex: '0' })
-            .removeAttr('aria-controls aria-expanded')
-            .off('.datex') // unbind anything we added earlier
-            .on('keydown.datex', function (ev) {
-              if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); $(this).trigger('click'); }
-            });
-        // IMPORTANT: no .on('click', ...) here — let PP’s own handler open the picker
-      }
-    });
-
-    // If <html lang> flips without reload, relabel the button/input
-    var mo = new MutationObserver(function () {
-      var lang  = (document.documentElement.lang || 'en').toLowerCase();
-      var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-      $(sel).attr('lang', lang);
-      $('.form-control-cell .input-group.datetimepicker [role="button"]').attr({ title: label, 'aria-label': label });
-    });
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-
-    // Defensive: if anything re-adds a placeholder, strip it again
-    $(document).on('input change focus blur', sel, function () { this.removeAttribute('placeholder'); });
-  });
-})(window.jQuery || window.$);
-
-// Inside-input calendar icon (PP datepicker) — native-like look
-(function ($) {
-  $(function () {
-    // Target all PP date/datetime visible groups
-    $('.form-control-cell .input-group.datetimepicker').each(function () {
-      var $grp = $(this);
-      var $btn = $grp.find('.input-group-addon.btn,[role="button"]').first();
-      var $input = $grp.find('input[id$="_datepicker_description"], input[id$="_datepicker"]');
-
-      if (!$btn.length || !$input.length) return;
-
-      // 1) Make this group use the inside-icon layout you already styled in custom.css
-      $grp.addClass('pp-inside');
-
-      // 2) Bilingual label for AT
-      var lang  = (document.documentElement.lang || 'en').toLowerCase();
-      var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-      $btn.attr({ 'aria-label': label, title: label, 'aria-haspopup': 'false' })
-          .removeAttr('aria-controls aria-expanded');
-
-      // 3) Replace PP's icon markup with a native-like inline SVG
-      var svg =
-        '<svg class="pp-cal" aria-hidden="true" focusable="false" ' +
-        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
-        'stroke-linecap="round" stroke-linejoin="round">' +
-          '<rect x="3" y="4.5" width="18" height="16.5" rx="2" ry="2"></rect>' +
-          '<line x1="16" y1="2.5" x2="16" y2="6"></line>' +
-          '<line x1="8"  y1="2.5" x2="8"  y2="6"></line>' +
-          '<line x1="3"  y1="9"   x2="21" y2="9"></line>' +
-        '</svg>';
-
-      // remove any existing <span class="fa ..."> or .icon-calendar
-      $btn.find('.fa, .icon-calendar').remove();
-      $btn.append(svg);
-    });
-
-    // If <html lang> flips dynamically, relabel the icon
-    var mo = new MutationObserver(function () {
-      var lang  = (document.documentElement.lang || 'en').toLowerCase();
-      var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-      $('.form-control-cell .input-group.datetimepicker.pp-inside .input-group-addon.btn')
-        .attr({ 'aria-label': label, title: label });
-    });
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  });
-})(window.jQuery || window.$);
-
-// --- Pre-submit mirror for PP date/time (runs BEFORE PP validators) ---
-(function(){
-  var form = document.querySelector('form');
-  if (!form || form.__ppPreflightHooked) return;
-  form.__ppPreflightHooked = true;
-
-  // Capture phase so this runs before PP's bubble-phase validators
-  form.addEventListener('submit', function () {
-    // mirror visible → backing
-    $('.input-group.datetimepicker input[id$="_datepicker_description"], \
-    .input-group.datetimepicker input[id$="_timepicker_description"], \
-    .input-group.pp-inside     input[id$="_timepicker_description"], \
-    .input-group.pp-inside     input[id$="_datepicker_description"]').each(function () {
-      var baseId = this.id.replace(/_(date|time)picker(?:_description)?$/, '');
-      $('#' + baseId).val(getCompositeDateTimeValue(baseId));
-    });
-  }, true);
-
-})();
-
-/* ============================================
-   Public helper: disable PP DateFormat validators (hardened)
-   ============================================ */
-(function (w, $) {
-  'use strict';
-
-  var SUFFIX_RE = /(_datepicker(_description)?|_timepicker(_description)?|_name|_value|_entityname|_text|_input_file)$/i;
-
-  function toBaseId(s) { return String(s || '').replace(SUFFIX_RE, ''); }
-  function normalizeBases(bases) {
-    var arr = Array.isArray(bases) ? bases : [bases];
-    var seen = Object.create(null), out = [];
-    for (var i = 0; i < arr.length; i++) {
-      var b = toBaseId(arr[i]);
-      if (b && !seen[b]) { seen[b] = 1; out.push(b); }
-    }
-    return out;
-  }
-
-  function doDisable(targets, opts) {
-    var changed = 0;
-    var validators = w.Page_Validators || [];
-    for (var i = 0; i < validators.length; i++) {
-      var v = validators[i];
-      if (!v || !v.id) continue;
-      if (!/^DateFormatValidator/i.test(String(v.id))) continue;
-
-      var baseCtl = toBaseId(v.controltovalidate);
-      var baseId  = String(v.id).replace(/^DateFormatValidator/i, '');
-
-      if (targets.indexOf(baseCtl) === -1 && targets.indexOf(baseId) === -1) continue;
-
-      v.enabled = false;
-      v.isvalid = true;
-      v.evaluationfunction = function () { return true; };
-
-      var el = document.getElementById(String(v.id));
-      if (el) el.style.display = 'none';
-
-      if (typeof w.ValidatorUpdateDisplay === 'function') {
-        try { w.ValidatorUpdateDisplay(v); } catch (_) {}
-      }
-      changed++;
-    }
-
-    // Hide any orphaned spans PP might have emitted
-    targets.forEach(function (b) {
-      ['DateFormatValidator' + b,
-       'DateFormatValidator' + b + '_datepicker_description',
-       'DateFormatValidator' + b + '_timepicker_description'
-      ].forEach(function (id) {
-        var el = document.getElementById(id); if (el) el.style.display = 'none';
-      });
-    });
-
-    // Ensure browser HTML5 constraint validation never blocks our submit
-    try { $('form').attr('novalidate', 'novalidate'); } catch (_) {}
-
-    if (opts.repaint) {
-      try { targets.forEach(function (b){ if (typeof clearFieldErrorUI === 'function') clearFieldErrorUI(b, 'date'); }); } catch(_){}
-      try { if (typeof w.ValidatorUpdateIsValid === 'function') w.ValidatorUpdateIsValid(); } catch(_){}
-      try { if (typeof w.globalEvaluationFunction === 'function') w.globalEvaluationFunction(); } catch(_){}
-    }
-    if (opts.verbose && changed) console.debug('[pp-datefmt] disabled for:', targets.join(', '), '(count=' + changed + ')');
-    return changed;
-  }
-
-  w.disablePPDateFormatFor = function (bases, options) {
-    var opts = Object.assign({
-      onSubmit: true,
-      submitSelector: '.btn.next, #NextButton, button[type=submit], input[type=submit]',
-      wrapPageClientValidate: false,
-      repaint: false,
-      verbose: false
-    }, options || {});
-
-    var targets = normalizeBases(bases);
-    if (!targets.length) {
-      console.warn('[pp-datefmt] No base ids provided.');
-      return function(){};
-    }
-
-    // Run now + after DOM ready (in case called too early)
-    doDisable(targets, opts);
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function(){ doDisable(targets, opts); }, { once: true });
-    }
-
-    // Re-apply on partial postbacks (UpdatePanel)
-    try {
-      if (w.Sys && w.Sys.WebForms && w.Sys.WebForms.PageRequestManager) {
-        var prm = w.Sys.WebForms.PageRequestManager.getInstance();
-        if (!prm._ppDatefmtHooked) {
-          prm.add_endRequest(function () { doDisable(targets, opts); });
-          prm._ppDatefmtHooked = true;
-        }
-      }
-    } catch (_) {}
-
-    // Re-apply right before visible submits
-    try {
-      $(document)
-        .off('.ppDatefmt')
-        .on('click.ppDatefmt', opts.submitSelector, function () { doDisable(targets, opts); });
-    } catch (_) {}
-
-    // Re-apply for programmatic submits (Page_ClientValidate())
-    if (opts.wrapPageClientValidate && typeof w.Page_ClientValidate === 'function' && !w._ppDatefmtWrapped) {
-      var orig = w.Page_ClientValidate;
-      w.Page_ClientValidate = function () {
-        doDisable(targets, opts);
-        return orig.apply(this, arguments);
-      };
-      w._ppDatefmtWrapped = true;
-    }
-
-    return function rerun(){ return doDisable(targets, opts); };
-  };
-})(window, window.jQuery || window.$);
-
-
-// ---- shared helpers ----
-function _ppVisFor(baseId, kind /* 'date' | 'time' */) {
-  // Power Pages uses *_datepicker_description for date/datetime; some builds add *_timepicker_description.
-  if (kind === 'time') {
-    const $t = $('#' + baseId + '_timepicker_description');
-    if ($t.length) return $t;
-    const $t2 = $('#' + baseId + '_timepicker');
-    if ($t2.length) return $t2;
-  }
-  return $('#' + baseId + '_datepicker_description'); // fallback (common in datetime)
-}
-function _syncVisibleToBack($vis, $orig) {
-  const v = String($vis.val() || '').trim();
-  $orig.val(v).trigger('change'); // keep PP listeners in the loop
-}
-function _hideBacking($orig) {
-  $orig.addClass('wb-inv').attr({ 'aria-hidden':'true', 'tabindex':'-1' });
-}
-
 // Normalize common bilingual time inputs to 24h "HH:mm[:ss]"
 function normalizeTime(t) {
   let s = String(t || '').trim();
@@ -1250,81 +1190,6 @@ function normalizeTime(t) {
   return s;
 }
 
-// validations.js — REPLACE your existing patchDate with this
-function patchDate(baseId) {
-  var $back = $('#' + baseId);
-  if (!$back.length) return;
-
-  // Find the PP visible group for this backing input
-  var $cell = $back.closest('.form-control-cell');
-  var $grp  = $cell.find('.input-group.datetimepicker, .input-group.pp-inside').first();
-  if (!$grp.length) return;
-
-  // Never touch time-only groups
-  if ($grp.is('[data-pp-time-only="1"]')) return;
-
-  // Resolve the visible date input
-  var $vis = $('#' + baseId + '_datepicker_description, #' + baseId + '_datepicker')
-              .filter(':input').first();
-  if (!$vis.length) return;
-
-  // Keep TEXT (not native date) so we don't get a second native icon/UI
-  try { $vis.attr('type', 'text'); } catch (e) {}
-  $vis.addClass('form-control')
-      .attr({
-        inputmode: 'numeric',
-        pattern: '\\d{4}-\\d{2}-\\d{2}',
-        'data-pp-as-date': '1'
-      })
-      // strip PP/WET date wiring on the visible input — PP's addon/button handles the UI
-      .removeAttr('data-ui data-type data-date-format placeholder');
-
-  // Use the inside-icon layout
-  $grp.addClass('pp-inside');
-
-  // (1) If WET injected its own opener button, remove it (we want ONLY the PP addon)
-  $grp.children('button.btn:not(.input-group-addon)').remove();
-
-  // (2) De-dupe addon buttons (keep first -> one tab stop, one icon)
-  var $addons = $grp.find('.input-group-addon.btn, [role="button"]');
-  if ($addons.length > 1) { $addons.slice(1).remove(); }
-  var $btn = $grp.find('.input-group-addon.btn, [role="button"]').first();
-  if (!$btn.length) return;
-
-  // (3) Accessible label (bilingual)
-  var lang  = (document.documentElement.lang || 'en').toLowerCase();
-  var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-  $btn.attr({ 'aria-label': label, title: label, 'aria-haspopup': 'false', tabindex: '0' })
-      .removeAttr('aria-controls aria-expanded');
-
-  // (4) Single calendar glyph (remove any legacy icons first)
-  $btn.find('.pp-cal, .fa, .icon-calendar, svg').remove();
-  $btn.append(
-    '<svg class="pp-cal" aria-hidden="true" focusable="false" ' +
-    'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
-    'stroke-linecap="round" stroke-linejoin="round">' +
-      '<rect x="3" y="4.5" width="18" height="16.5" rx="2" ry="2"></rect>' +
-      '<line x1="16" y1="2.5" x2="16" y2="6"></line>' +
-      '<line x1="8"  y1="2.5" x2="8"  y2="6"></line>' +
-      '<line x1="3"  y1="9"   x2="21" y2="9"></line>' +
-    '</svg>'
-  );
-}
-
-// validations.js — add once
-(function($){
-  $(function(){
-    $('.form-control-cell .input-group.datetimepicker.pp-inside:not([data-pp-time-only="1"])').each(function(){
-      var $grp = $(this);
-      // Remove any non-addon WET buttons that create a second tab stop/icon
-      $grp.children('button.btn:not(.input-group-addon)').remove();
-      // Ensure a single addon button
-      var $addons = $grp.find('.input-group-addon.btn, [role="button"]');
-      if ($addons.length > 1) { $addons.slice(1).remove(); }
-    });
-  });
-})(window.jQuery || window.$);
-
 function refreshDateTimeAddonLabels(scope) {
   var $root = scope ? $(scope) : $(document);
   var lang  = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
@@ -1337,221 +1202,20 @@ function refreshDateTimeAddonLabels(scope) {
       var isTimeOnly = $g.is('[data-pp-time-only="1"]') ||
                        $g.find('input[id$="_datepicker_description"][data-pp-as-time="1"]').length > 0;
       var label = isTimeOnly ? timeLabel : dateLabel;
-      $g.find('.input-group-addon.btn,[role="button"]').attr({ 'aria-label': label, title: label });
+      //$g.find('.input-group-addon.btn,[role="button"]').attr({ 'aria-label': label, title: label });
+      $g.find('.input-group-addon.btn,[role="button"]')
+      .attr({ 'aria-label': label })        
+      .removeAttr('title');
     });
 }
 
 // call once on load; call again after you patch fields or PP redraws
 $(function(){
   refreshDateTimeAddonLabels(document);
+  var $scope = $('#liquid_form, .crmEntityFormView, form[id$="EntityFormView"]').first();
+  if (!$scope.length) { $scope = $(document); }
+  $scope.find('input,select,textarea,button').removeAttr('title');
 });
-
-// --- Time-only hardening for PP datetime group (no calendar) -----------------
-(function ($, w) {
-  'use strict';
-
-  // Open the native time picker if available, otherwise just focus the input.
-  function openTimePicker($input) {
-    var el = $input && $input[0];
-    if (!el) return;
-    try {
-      if (typeof el.showPicker === 'function') {
-        el.showPicker();     // Chrome/Edge
-      } else {
-        el.focus();          // fallback
-      }
-    } catch (e) {
-      el.focus();
-    }
-  }
-
-  // Make a PP datetime group behave as "time-only"
-  function hardenTimeOnly(baseId) {
-    var $back = $('#' + baseId); // backing input
-    if (!$back.length) return;
-
-    // Find the PP visible group for this backing input
-    var $grp = $back
-      .closest('.control')
-      .find('.input-group.datetimepicker, .input-group.pp-inside')
-      .first();
-
-    if (!$grp.length) return;
-
-    // Mark and label the group as time-only
-    $grp.attr('data-pp-time-only', '1');
-
-    var fr    = (document.documentElement.lang || 'en').toLowerCase().startsWith('fr');
-    var label = fr ? 'Choisir une heure' : 'Choose a time';
-
-    var $btn   = $grp.find('.input-group-addon.btn,[role="button"]').first();
-    var $tVis  = $grp.find('#' + baseId + '_timepicker_description, #' + baseId + '_timepicker, input[type="time"]').first();
-    var $dVis  = $grp.find('#' + baseId + '_datepicker_description, #' + baseId + '_datepicker').first();
-
-    // Ensure the visible "date" input is TEXT so setSelectionRange issues never occur
-    if ($dVis.length && $dVis.attr('type') !== 'text') {
-      $dVis.attr('type', 'text'); // our date enhancer wants text, not native date
-    }
-
-    // If we don't have a time-visible partner yet, fall back to the backing input
-    if (!$tVis.length) $tVis = $back;
-
-    // 1) Kill PP’s calendar for this group only (if already initialized)
-    try {
-      var dp = $grp.data('DateTimePicker');
-      if (dp && typeof dp.destroy === 'function') {
-        dp.destroy();
-      }
-    } catch (e) { /* no-op */ }
-
-    // Also destroy if it was bound on the input itself
-    try {
-      var dp2 = $dVis.data && $dVis.data('DateTimePicker');
-      if (dp2 && typeof dp2.destroy === 'function') {
-        dp2.destroy();
-      }
-    } catch (e) { /* no-op */ }
-
-    // 2) Guard against PP re-binding or bubbling dp.* events later
-    $grp.off('.pp-timeonly'); // our namespace
-    $grp.on('dp.show.pp-timeonly dp.change.pp-timeonly dp.error.pp-timeonly dp.hide.pp-timeonly', function (e) {
-      e.stopImmediatePropagation();
-      return false;
-    });
-
-    // 3) Make the “calendar” button behave like a time button
-    if ($btn.length) {
-      $btn.attr({
-        title: label,
-        'aria-label': label,
-        'aria-haspopup': 'false'
-      })
-      .removeAttr('aria-controls aria-expanded')
-      .off('.pp-timeonly')
-      .on('click.pp-timeonly', function (ev) {
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-        var $native = $('#' + baseId + '_nativeTime');
-        openTimePicker($native.length ? $native : $tVis);
-      })
-      .on('keydown.pp-timeonly', function (ev) {
-        if (ev.key === ' ' || ev.key === 'Enter') {
-          ev.preventDefault();
-          ev.stopImmediatePropagation();
-         var $native = $('#' + baseId + '_nativeTime');
-         openTimePicker($native.length ? $native : $tVis);
-        }
-      });
-
-      // Optional: swap the calendar SVG to a clock glyph for clarity
-      $btn.find('.fa, .icon-calendar, .pp-cal').remove();
-      if ($btn.find('.pp-clock').length === 0) {
-        $btn.append(
-          '<svg class="pp-clock" aria-hidden="true" focusable="false" ' +
-          'viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" ' +
-          'fill="none" stroke-linecap="round" stroke-linejoin="round">' +
-          '<circle cx="12" cy="12" r="9"></circle>' +
-          '<polyline points="12,7 12,12 16,14"></polyline>' +
-          '</svg>'
-        );
-      }
-    }
-    // Optional: if some script re-injects the calendar later, auto-purge it
-    try {
-      const btnNode = $btn.get(0);
-      const mo = new MutationObserver(() => { $btn.find('.pp-cal').remove(); });
-      mo.observe(btnNode, { childList: true, subtree: true });
-    } catch { }
-
-
-    // 4) Do NOT auto-open from the visible text input; allow typing freely
-    if ($dVis.length) {
-      $dVis.off('.pp-timeonly')            // remove prior focus/click handlers
-        .attr('aria-label', label);     // keep the label for AT
-    }
-  }
-
-  // Wrap existing patchTime so we don’t have to touch its internals
-  (function wrapPatchTime() {
-    var orig = w.patchTime;
-    w.patchTime = function (baseId) {
-      if (typeof orig === 'function') { orig(baseId); }
-      // then harden to truly time-only
-      hardenTimeOnly(baseId);
-      if (typeof w.ensureTimeAddonWorks === 'function') {
-       w.ensureTimeAddonWorks(baseId);
-      }
-    };
-  })();
-
-  // Safety net: if a page marks a group as time-only without calling patchTime,
-
-$(document)
-  .off('.pp-timeonly-global')
-  .on('dp.show.pp-timeonly-global dp.change.pp-timeonly-global dp.error.pp-timeonly-global dp.hide.pp-timeonly-global',
-    '.input-group[data-pp-time-only="1"]',
-    function (e) { e.stopImmediatePropagation(); return false; })
-  .on('click.pp-timeonly-global',
-     '.input-group[data-pp-time-only="1"] .input-group-addon.btn, .input-group[data-pp-time-only="1"] [role="button"]',
-     function (ev) {
-       ev.preventDefault(); ev.stopImmediatePropagation();
-       var $grp  = $(this).closest('.input-group');
-       var $time = $grp.find('input[id$="_timepicker_description"], input[id$="_timepicker"], input[type="time"]').first();
-       if ($time.length) openTimePicker($time);
-     })
-  .on('keydown.pp-timeonly-global',
-     '.input-group[data-pp-time-only="1"] .input-group-addon.btn, .input-group[data-pp-time-only="1"] [role="button"]',
-     function (ev) {
-       // Only activate on Enter/Space — allow Tab to move focus out
-       if (ev.key !== 'Enter' && ev.key !== ' ') return;
-       ev.preventDefault(); ev.stopImmediatePropagation();
-       var $grp  = $(this).closest('.input-group');
-       var $time = $grp.find('input[id$="_timepicker_description"], input[id$="_timepicker"], input[type="time"]').first();
-       if ($time.length) openTimePicker($time);
-     });
-
-
-})(window.jQuery || window.$, window);
-
-// --- helper: ensure a true time partner exists and is used -------------------
-function _ensureTimePartner(baseId, $group) {
-  // Prefer an existing *_timepicker_description
-  var $vis = $('#' + baseId + '_timepicker_description');
-  if ($vis.length) return $vis;
-
-  // If the visible partner is still *_datepicker_description, replace it with a time partner
-  var $dateVis = $('#' + baseId + '_datepicker_description');
-  if ($dateVis.length) {
-    // Build a fresh input (don’t clone attributes like the date pattern)
-    var cls = ($dateVis.attr('class') || '').trim();
-    var lang = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
-    $vis = $('<input type="text"/>')
-      .attr('id', baseId + '_timepicker_description')
-      .attr('lang', lang)
-      .addClass(cls || 'form-control input-text-box');
-
-    // Keep current value if it looks like time; otherwise clear
-    var v = String($dateVis.val() || '').trim();
-    try {
-      var nv = (typeof normalizeTime === 'function') ? normalizeTime(v) : v;
-      if (/^\d{1,2}:[0-5]\d/.test(nv)) $vis.val(nv);
-    } catch (_) {}
-
-    $dateVis.after($vis);
-    $dateVis.remove();
-
-    // Point the label at the new input
-    $('#' + baseId + '_label').attr('for', baseId + '_timepicker_description');
-    return $vis;
-  }
-
-  // Last resort: create one at the start of the group
-  $vis = $('<input type="text" class="form-control input-text-box"/>')
-           .attr('id', baseId + '_timepicker_description');
-  if ($group && $group.length) $group.prepend($vis);
-  $('#' + baseId + '_label').attr('for', baseId + '_timepicker_description');
-  return $vis;
-}
 
 // Toggle PP "required" UI bits for a field baseId
 // opts: { showNow?: boolean, deferError?: boolean }
@@ -1655,368 +1319,6 @@ function wirePortalComposite(opts) {
   } catch (_) {}
 }
 
-
-// ensureTimeAddonWorks(baseId)
-function ensureTimeAddonWorks(baseId) {
-  const lang  = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
-  const isFr  = lang.startsWith('fr');
-  const label = isFr ? "Choisir l’heure" : "Choose a time";
-
-  const $back  = $('#' + baseId);
-  if (!$back.length) return;
-
-  const $cell = $back.closest('.form-control-cell');
-  const $group = $cell.find('.input-group.pp-inside, .input-group.datetimepicker').first();
-  if (!$group.length) return;
-  // Ensure only one focusable addon in the group (avoid two tab stops)
-  var $addons = $group.find('.input-group-addon.btn, [role="button"]');
-  if ($addons.length > 1) { $addons.slice(1).remove(); }
-
-  // Layout + mark time-only
-  $group.addClass('pp-inside').attr('data-pp-time-only','1').removeClass('datetimepicker').off('.timeonly-local');
-  $group.on('dp.show.timeonly-local dp.change.timeonly-local dp.error.timeonly-local dp.hide.timeonly-local',
-    function (e) { e.stopImmediatePropagation(); return false; });
-
-  // Ensure PP DateFormat validator does not run for this base (quietly)
-  if (typeof disablePPDateFormatFor === 'function') {
-    try { disablePPDateFormatFor(baseId, { repaint: true }); } catch (_) {}
-  }
-
-  // Get/ensure the visible TIME partner (rename away from *_datepicker_description)
-  var $vis = _ensureTimePartner(baseId, $group);
-
-  // Backing input is submit source only
-  $back.addClass('wb-inv').attr({ 'aria-hidden':'true', tabindex: -1 });
-
-  // Make the visible input truly "time" (accept EN/FR + 12h/24h); guard against re-clobbering
-  const timePattern =
-    '(?:([01]?\\d|2[0-3]):[0-5]\\d(?:[:][0-5]\\d)?)' +               // 24h HH:MM[:SS]
-    '|(?:0?[1-9]|1[0-2]):[0-5]\\d(?:[:][0-5]\\d)?\\s*(?:[AaPp][Mm])' + // 12h h:MM[:SS] AM/PM
-    '|(?:([01]?\\d|2[0-3])\\s*[hH]\\s*[0-5]\\d)';                    // FR HH h MM
-
-  $vis.attr({
-    'data-pp-as-time': '1',
-    'aria-label': label,
-    inputmode: 'numeric',
-    pattern: timePattern,
-    autocomplete: 'off'
-  }).removeAttr('data-ui data-type data-date-format placeholder');
-
-  try {
-    const visEl = $vis.get(0);
-    if (!visEl._ppTimePatternMo) {
-      const mo = new MutationObserver(() => {
-        if ($vis.attr('pattern') !== timePattern) $vis.attr('pattern', timePattern);
-        if ($vis.attr('data-ui'))          $vis.removeAttr('data-ui');
-        if ($vis.attr('data-type'))        $vis.removeAttr('data-type');
-        if ($vis.attr('data-date-format')) $vis.removeAttr('data-date-format');
-      });
-      mo.observe(visEl, { attributes: true, attributeFilter: ['pattern','data-ui','data-type','data-date-format'] });
-      visEl._ppTimePatternMo = mo;
-    }
-  } catch {}
-
-  //  Step C (init): keep UI quiet on initial render (no red frame)
-  _ppMarkRequired(baseId, !!($vis.val() && String($vis.val()).trim()), { deferError: true });
-
-  // Replace the addon icon → a single clock; keep focus behavior
-  let $addon = $group.find('.input-group-addon.btn, [role="button"]').first();
-  if ($addon.length) {
-    $addon.attr({ title: label, 'aria-label': label, 'aria-haspopup': 'false', type:'button', tabindex: 0, 'data-wet4-time-btn': '1' })
-          .removeAttr('aria-controls aria-expanded');
-    $addon.find('.pp-cal, .fa, .icon-calendar, svg').remove();
-    $addon.append(
-      '<svg class="pp-clock" aria-hidden="true" focusable="false" ' +
-      'viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" ' +
-      'fill="none" stroke-linecap="round" stroke-linejoin="round">' +
-        '<circle cx="12" cy="12" r="9"></circle>' +
-        '<polyline points="12,7 12,12 16,14"></polyline>' +
-      '</svg>'
-    );
-    $addon.off('mousedown.timeonly-focus').on('mousedown.timeonly-focus', function(){ /* allow focus */ });
-  } else {
-    // If there was no addon (unlikely), create one
-    $addon = $('<button type="button" class="input-group-addon btn" data-wet4-time-btn="1" />')
-      .attr({ title: label, 'aria-label': label, 'aria-haspopup': 'false', tabindex: 0 })
-      .html(
-        '<svg class="pp-clock" aria-hidden="true" focusable="false" ' +
-        'viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" ' +
-        'fill="none" stroke-linecap="round" stroke-linejoin="round">' +
-          '<circle cx="12" cy="12" r="9"></circle>' +
-          '<polyline points="12,7 12,12 16,14"></polyline>' +
-        '</svg>'
-      );
-    $group.append($addon);
-  }
-
-  // Create/attach a hidden native <input type="time"> for showPicker()
-  let $native = $('#' + baseId + '_nativeTime');
-  if (!$native.length) {
-    $native = $('<input type="time" class="wb-inv" step="60" autocomplete="off">')
-      .attr({ id: baseId + '_nativeTime', 'aria-hidden':'true', tabindex: -1 })
-      .insertAfter($vis);
-  }
-
-  // stickiness cache
-  let lastTime = (typeof normalizeTime === 'function')
-    ? normalizeTime(String($vis.val() || ''))
-    : String($vis.val() || '').trim();
-
-  // Native → visible/backing
-  $native.off('.timeonly-native').on('change.timeonly-native input.timeonly-native', function () {
-    const raw = this.value ? this.value.slice(0, 5) : '';
-    const v = (typeof normalizeTime === 'function') ? normalizeTime(raw) : raw;
-    if ($back.length && $back.val() !== v) $back.val(v);     // 1) backing (no events)
-    if (v !== $vis.val()) {                                  // 2) visible + events
-      $vis.val(v).trigger('input').trigger('change');
-    }
-    if (v) lastTime = v;
-    //  Step C (typing/picking): quiet required UI while interacting
-    _ppMarkRequired(baseId, !!v, { deferError: true });
-    if (typeof setIsDirty === 'function') { try { setIsDirty($vis.attr('id')); } catch (_) { } }
-  });
-
-  // Visible typing → preload native + keep backing in sync
-  $vis.off('.timeonly-sync')
-      .on('input.timeonly-sync change.timeonly-sync', function () {
-        const cur = (typeof normalizeTime === 'function')
-          ? normalizeTime(String($vis.val() || ''))
-          : String($vis.val() || '').trim();
-        $native.val(cur || '');
-        if ($back.length && $back.val() !== cur) $back.val(cur || ''); // no events
-        if (cur) lastTime = cur;
-        //  Step C (typing): quiet required UI
-        _ppMarkRequired(baseId, !!cur, { deferError: true });
-      })
-      // Blur stickiness: restore if PP/other clears after blur
-      .on('blur.timeonly-stick', function () {
-        const visEl  = this;
-        const curVis = (typeof normalizeTime === 'function')
-          ? normalizeTime(String(visEl.value || ''))
-          : String(visEl.value || '').trim();
-        if (curVis) lastTime = curVis;
-
-        setTimeout(() => {
-          const stillEmpty = !visEl.value || !visEl.value.trim();
-          const recovered  = lastTime || ($back.length ? String($back.val() || '') : '') || ($native.val() || '');
-          if (stillEmpty && recovered) {
-            visEl.value = recovered;
-            if ($back.length) $back.val(recovered);
-            $native.val(recovered);
-            $(visEl).trigger('input').trigger('change');
-          }
-          //  Step C (blur): still quiet (no red) after blur
-          _ppMarkRequired(baseId, !!(visEl.value && visEl.value.trim()), { deferError: true });
-        }, 120);
-      });
-
-  // initial preload so the native picker lands on current value
-  try {
-    const cur = (typeof normalizeTime === 'function')
-      ? normalizeTime(String($vis.val() || ''))
-      : String($vis.val() || '').trim();
-    $native.val(cur || '');
-  } catch { }
-  //  Step C (post-init): quiet required UI after preload
-  _ppMarkRequired(baseId, !!($vis.val() && String($vis.val()).trim()), { deferError: true });
-
-  // Step C (submit-capture): mirror visible → backing BEFORE required runs; show red only on submit
-  try {
-    var formEl = $group.closest('form').get(0);
-    if (formEl && !formEl['_ppTimeSubmit_' + baseId]) {
-      formEl.addEventListener('submit', function () {
-        var v = String($vis.val() || '').trim();
-        if ($back.length) $back.val(v || '');
-        _ppMarkRequired(baseId, !!v, { showNow: true });
-      }, true); // capture
-      formEl['_ppTimeSubmit_' + baseId] = true;
-    }
-  } catch (_){}
-
-  // Addon → open native picker (with focus ring)
-  $addon.off('.timeonly').on('click.timeonly keydown.timeonly', function (ev) {
-    if (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return;
-    const btnEl = this; btnEl.tabIndex = 0; btnEl.focus();
-    requestAnimationFrame(() => { if (document.activeElement !== btnEl) btnEl.focus(); });
-
-    ev.preventDefault(); ev.stopImmediatePropagation();
-
-    try {
-      const cur = (typeof normalizeTime === 'function')
-        ? normalizeTime(String($vis.val() || ''))
-        : String($vis.val() || '').trim();
-      if (cur) $native.val(cur);
-    } catch (_) {}
-
-    const el = $native.get(0);
-    if (el && typeof el.showPicker === 'function') {
-      try { el.showPicker(); return; } catch (_) {}
-    }
-    openSimpleTimeOverlay($vis.get(0), isFr);
-  });
-}
-
-// Minimal overlay fallback (only if showPicker is unavailable)
-function openSimpleTimeOverlay(input, isFr) {
-  closeSimpleTimeOverlay();
-  const wrap = document.createElement('div');
-  wrap.id = (input.id || 'time') + '_overlay';
-  wrap.setAttribute('role','dialog'); wrap.setAttribute('aria-modal','true');
-  Object.assign(wrap.style, {
-    position:'absolute', zIndex:9999, background:'#fff', border:'1px solid #bbb',
-    borderRadius:'6px', padding:'8px', boxShadow:'0 4px 12px rgba(0,0,0,.15)', fontSize:'14px'
-  });
-  const r = input.getBoundingClientRect();
-  wrap.style.top  = (window.scrollY + r.bottom + 6) + 'px';
-  wrap.style.left = (window.scrollX + r.left) + 'px';
-
-  const label = document.createElement('div');
-  label.textContent = isFr ? 'Choisir une heure' : 'Choose a time';
-  label.style.marginBottom = '6px';
-
-  const hh = document.createElement('select'); hh.style.marginRight = '6px';
-  for (let h=0; h<24; h++) hh.add(new Option(String(h).padStart(2,'0'), String(h).padStart(2,'0')));
-  const mm = document.createElement('select');
-  for (let m=0; m<60; m+=5) mm.add(new Option(String(m).padStart(2,'0'), String(m).padStart(2,'0')));
-
-  const m  = String(input.value || '').match(/^(\d{1,2}):([0-5]\d)/);
-  if (m) { hh.value = String(m[1]).padStart(2,'0'); mm.value = m[2]; }
-
-  const ok = document.createElement('button'); ok.type='button'; ok.textContent='OK'; ok.style.marginLeft='8px';
-  const ca = document.createElement('button'); ca.type='button'; ca.textContent=isFr?'Annuler':'Cancel'; ca.style.marginLeft='6px';
-
-  ok.onclick = function(){
-    const v = hh.value + ':' + mm.value;
-    input.value = v;
-    input.dispatchEvent(new Event('input',{bubbles:true,cancelable:true}));
-    input.dispatchEvent(new Event('change',{bubbles:true,cancelable:true}));
-    closeSimpleTimeOverlay(); input.focus();
-  };
-  ca.onclick = closeSimpleTimeOverlay;
-
-  wrap.append(label, hh, mm, ok, ca);
-  document.body.appendChild(wrap);
-
-  setTimeout(() => {
-    const onDoc = e => { if (!wrap.contains(e.target)) closeSimpleTimeOverlay(); };
-    const onKey = e => { if (e.key === 'Escape') closeSimpleTimeOverlay(); };
-    document.addEventListener('mousedown', onDoc, { once:true });
-    document.addEventListener('keydown',   onKey, { once:true });
-    wrap._cleanup = () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown',   onKey);
-    };
-  }, 0);
-}
-function closeSimpleTimeOverlay(){
-  const el = document.querySelector('[id$="_overlay"]');
-  if (el){ el._cleanup && el._cleanup(); el.remove(); }
-}
-
-// Inside-input calendar icon (PP datepicker) — native-like look
-(function ($) {
-  $(function () {
-    // Skip groups explicitly marked time-only and run once per group
-    $('.form-control-cell .input-group.datetimepicker:not([data-pp-time-only="1"])').each(function () {
-      var $grp = $(this);
-      if ($grp.data('ppInsideBound')) return;
-      $grp.data('ppInsideBound', true);
-
-      // Ensure we only have ONE focusable addon button
-      var $addons = $grp.find('.input-group-addon.btn, [role="button"]');
-      if ($addons.length > 1) {
-        // Keep the first; remove the rest to avoid a second tab stop
-        $addons.slice(1).remove();
-      }
-      var $btn = $grp.find('.input-group-addon.btn, [role="button"]').first();
-
-      var $input = $grp.find('input[id$="_datepicker_description"], input[id$="_datepicker"]');
-      if (!$btn.length || !$input.length) return;
-
-      // 1) Use the inside-icon layout you styled in custom.css
-      $grp.addClass('pp-inside');
-      $grp.children('button.btn:not(.input-group-addon)').remove();
-      // 2) Bilingual label for AT
-      var lang  = (document.documentElement.lang || 'en').toLowerCase();
-      var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-      $btn.attr({ 'aria-label': label, title: label, 'aria-haspopup': 'false', tabindex: '0' })
-          .removeAttr('aria-controls aria-expanded');
-
-      // 3) Replace icon markup with a single inline SVG; remove any legacy icons
-      var svg =
-        '<svg class="pp-cal" aria-hidden="true" focusable="false" ' +
-        'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
-        'stroke-linecap="round" stroke-linejoin="round">' +
-          '<rect x="3" y="4.5" width="18" height="16.5" rx="2" ry="2"></rect>' +
-          '<line x1="16" y1="2.5" x2="16" y2="6"></line>' +
-          '<line x1="8"  y1="2.5" x2="8"  y2="6"></line>' +
-          '<line x1="3"  y1="9"   x2="21" y2="9"></line>' +
-        '</svg>';
-
-      // Remove any existing icon(s) then append exactly one
-      $btn.find('.pp-cal, .fa, .icon-calendar, svg').remove();
-      $btn.append(svg);
-    });
-
-    // If <html lang> flips dynamically, relabel the icon
-    var mo = new MutationObserver(function () {
-      var lang  = (document.documentElement.lang || 'en').toLowerCase();
-      var label = lang.startsWith('fr') ? 'Choisir une date' : 'Choose a date';
-      $('.form-control-cell .input-group.datetimepicker.pp-inside:not([data-pp-time-only="1"]) .input-group-addon.btn')
-        .attr({ 'aria-label': label, title: label });
-    });
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  });
-})(window.jQuery || window.$);
-
-// Safety net: fix pattern on any already-rendered time-only groups
-$(function () {
-  $('.form-control-cell .input-group[data-pp-time-only="1"]').each(function () {
-    const $grp = $(this);
-    const $back = $grp.closest('.control').find('input[id]').first(); // the hidden/backing input
-    const baseId = $back.attr('id');
-    if (baseId && typeof ensureTimeAddonWorks === 'function') {
-      ensureTimeAddonWorks(baseId); // re-enforces the time pattern + handlers
-    } else {
-      // Fallback: set pattern directly on the visible input if baseId not found
-      const $vis = $grp.find('input[id$="_timepicker_description"], input[id$="_timepicker"], input[id$="_datepicker_description"]').first();
-      if ($vis.length) {
-        const timePattern =
-          '(?:([01]?\\d|2[0-3]):[0-5]\\d(?:[:][0-5]\\d)?)' +
-          '|(?:0?[1-9]|1[0-2]):[0-5]\\d(?:[:][0-5]\\d)?\\s*(?:[AaPp][Mm])' +
-          '|(?:([01]?\\d|2[0-3])\\s*[hH]\\s*[0-5]\\d)';
-        $vis.attr({ 'data-pp-as-time': '1', inputmode: 'numeric', pattern: timePattern, autocomplete: 'off' })
-            .removeAttr('data-ui data-type data-date-format placeholder');
-      }
-    }
-  });
-});
-
-// Put near your other helpers
-function initWetDatePolyfill(ids){
-  var wet$ = window.jQuery || window.$wet;
-  ids = Array.isArray(ids) ? ids : [ids].filter(Boolean);
-
-  ids.forEach(id => {
-    var el = document.getElementById(id);
-    if (el) { el.type = 'date'; el.classList.add('wb-date'); }
-  });
-
-  // bilingual watermark
-  var isFr = (document.documentElement.lang || 'en').toLowerCase().startsWith('fr');
-  ids.forEach(id => {
-    var el = document.getElementById(id);
-    if (el) el.setAttribute('placeholder', isFr ? 'AAAA-MM-JJ' : 'YYYY-MM-DD');
-  });
-
-  // trigger the polyfill with WET's jQuery
-  if (wet$) {
-    var nodes = ids.map(id => document.getElementById(id)).filter(Boolean);
-    wet$(document).trigger('wb-init.wb-date', [nodes]);
-  }
-}
-// 
-
 // public helper to re-run all validators for a field now
 window.revalidate = function revalidate(id, type, opts) {
   try {
@@ -2043,4 +1345,552 @@ window.revalidate = function revalidate(id, type, opts) {
   }
 };
 
+(function(){
+  // Helper to select an input by id; uses your helper if available
+  function _ppSel(id){
+    if (typeof getFocusableField === "function") {
+      var $f = getFocusableField(id, "");
+      if ($f && $f.length) return $f;
+    }
+    return $('#' + id);
+  }
+
+  /**
+   * Enforce allowed phone chars while typing/pasting, and strip punctuation on blur.
+   * Rules:
+   *  1) Allow only digits and + - ( ) during input (others are removed immediately).
+   *  2) Validation expects 10–15 digits.
+   *  3) On blur (before validation), strip + - ( ) so value is digits-only.
+   * @param {string|string[]} ids
+   */
+  window.enableStrictPhoneInput = function(ids){
+    var arr = Array.isArray(ids) ? ids : [ids];
+
+    arr.forEach(function(id){
+      var $f = _ppSel(id);
+      if (!$f.length) return;
+
+      // Ensure idempotency
+      $f.off(".vphone");
+
+      // Hint browsers for a tel keypad; constrain pattern to allowed chars
+      //$f.attr("inputmode","tel").attr("pattern","[0-9()+-]*");
+      $f.attr("inputmode","tel").attr("pattern","[0-9()+\\-]*");
+      //$f.attr("inputmode","tel").removeAttr("pattern");
+
+      // Live sanitize: keep only 0-9, +, -, (, )
+      function sanitizeAllowedNow(el){
+        var before = el.value;
+        // Remove any char not allowed by Rule #1
+        var after  = before.replace(/[^0-9+\-()]/g, "");
+        if (after !== before) {
+          el.value = after;
+        }
+      }
+
+      // On any input (covers typing, paste, drag-drop, autofill)
+      $f.on("input.vphone", function(){
+        sanitizeAllowedNow(this);
+      });
+
+      // Extra guard on paste (older browsers)
+      $f.on("paste.vphone", function(e){
+        // Let paste happen, then sanitize on next tick
+        var el = this;
+        setTimeout(function(){ sanitizeAllowedNow(el); }, 0);
+      });
+
+      // On blur: strip + - ( ) so only digits remain (Rule #3),
+      // then trigger change so validation sees the normalized value.
+      $f.on("blur.vphone", function(){
+        var raw = String($(this).val() || "");
+        // Remove the allowed punctuation; digits are kept
+        var digitsOnly = raw.replace(/[+\-()]/g, "");
+        if (digitsOnly !== raw) $(this).val(digitsOnly);
+        // Also trim any accidental whitespace
+        if (/\s/.test(this.value)) this.value = this.value.replace(/\s+/g, "");
+        // Hand off to your validation pipeline
+        $(this).trigger("change");
+      });
+    });
+  };
+})();
+ 
+// Put focus "before" everything so the first Tab hits the skip link (#wb-tphp a.wb-sl)
+// (function ($) {
+//   function hasSummaryErrors() {
+//     return $('#ValidationSummaryEntityFormView:visible, .validation-summary-errors:visible, .wb-frmvld-msg[role="alert"]:visible, .wb-frmvld-list:visible').length > 0;
+//   }
+//   function focusBeforeSkip() {
+//     if (hasSummaryErrors()) return; // let summary keep focus on error pages
+//     $('body').attr('tabindex', '-1').focus();
+//     setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+//   }
+//   // Full load
+//   $(focusBeforeSkip);
+//   // Power Pages partial postbacks
+//   if (window.Sys?.WebForms?.PageRequestManager) {
+//     try { Sys.WebForms.PageRequestManager.getInstance().add_endRequest(focusBeforeSkip); } catch {}
+//   }
+// })(jQuery);
+
+
+// Put focus "before" everything so the first Tab hits the skip link (#wb-tphp a.wb-sl)
+(function () {
+  // If jQuery isn't present, use a safe DOM fallback
+  var $ = window.jQuery;
+
+  function hasSummaryErrors() {
+    var sel = '#ValidationSummaryEntityFormView:visible, .validation-summary-errors:visible, .wb-frmvld-msg[role="alert"]:visible, .wb-frmvld-list:visible';
+    return $ ? $(sel).length > 0
+             : !!(document.getElementById('ValidationSummaryEntityFormView')?.offsetParent ||
+                  document.querySelector('.validation-summary-errors')?.offsetParent ||
+                  document.querySelector('.wb-frmvld-msg[role="alert"], .wb-frmvld-list')?.offsetParent);
+  }
+
+  function focusBeforeSkip() {
+    if (hasSummaryErrors()) return;
+
+    // If something meaningful already has focus (e.g., user clicked fast), don't steal it.
+    var ae = document.activeElement;
+    if (ae && ae !== document.body && ae !== document.documentElement &&
+        !ae.closest?.('#wb-srch')) return;
+
+    // Prefer simple body focus, then clean up tabindex
+    var focused = false;
+    try {
+      if ($) { $('body').attr('tabindex','-1').focus(); focused = document.activeElement === document.body; }
+      else { document.body.setAttribute('tabindex','-1'); document.body.focus(); focused = document.activeElement === document.body; }
+    } catch {}
+
+    // Fallback: insert a sentinel just before skip links and focus it
+    if (!focused) {
+      var tphp = document.getElementById('wb-tphp');
+      var s = document.createElement('span');
+      s.id = 'pre-skip-sentinel';
+      s.tabIndex = -1;
+      (tphp?.parentNode || document.body).insertBefore(s, tphp || document.body.firstChild);
+      try { s.focus(); focused = document.activeElement === s; } catch {}
+      // remove sentinel soon after; focus will move on Tab
+      setTimeout(function(){ s.remove?.(); }, 50);
+    }
+
+    // Remove the temporary tabindex on body
+    setTimeout(function () { document.body.removeAttribute('tabindex'); }, 0);
+  }
+
+  function onLoad(fn){
+    if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(fn, 0);
+    else document.addEventListener('DOMContentLoaded', fn, { once: true });
+  }
+
+  onLoad(focusBeforeSkip);
+  // Power Pages / WebForms partial postbacks
+  try {
+    var prm = window.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+    if (prm) prm.add_endRequest(focusBeforeSkip);
+  } catch {}
+})();
+
+
+(function (w) {
+  function onReady(fn){document.readyState==='loading'?document.addEventListener('DOMContentLoaded',fn,{once:true}):setTimeout(fn,0)}
+  function find(sel){return sel?document.querySelector(sel):document.querySelector('h2.tab-title')||document.getElementById('wb-cont')||document.querySelector('main h1, main h2')}
+  function focusH(h){if(!h)return; if(!h.hasAttribute('tabindex'))h.setAttribute('tabindex','-1'); try{h.focus({preventScroll:false})}catch{h.focus()}}
+  function announceOrFocus(sel,mode){const h=find(sel); if(!h) return; if(mode==='announce'){w.__announceStepTitle?.(h.textContent.trim()); return;} focusH(h);}
+  function install(opts){const sel=opts?.selector,mode=opts?.mode; const go=()=>announceOrFocus(sel,mode); onReady(go); try{w.Sys?.WebForms?.PageRequestManager?.getInstance?.().add_endRequest(go);}catch{}}
+  w.WETFocus = w.WETFocus || { install };
+})(window);
+
+// ReadOnlySelect (no hints, WET/GCWeb-friendly)
+// Makes a native <select> behave read-only while remaining focusable.
+// Idempotent; safe to call multiple times and after WebForms partial postbacks.
+(function (w) {
+  'use strict';
+
+  function getList(target) {
+    if (!target) return [];
+    if (typeof target === 'string') return Array.from(document.querySelectorAll(target));
+    if (target instanceof Element) return [target];
+    if (Array.isArray(target) || target instanceof NodeList) return Array.from(target);
+    if (w.jQuery && target instanceof w.jQuery) return target.toArray();
+    return [];
+  }
+
+  function bindGuards(el) {
+    if (el.dataset.roBound === '1') return;
+    el.dataset.roBound = '1';
+
+    // Keep focus but prevent the popup
+    el.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      try { this.focus(); } catch {}
+    });
+    el.addEventListener('click', function (e) { e.preventDefault(); });
+
+    el.addEventListener('keydown', function (e) {
+      // Allow Tab/Shift+Tab only
+      if (e.key === 'Tab') return;
+      const k = e.key;
+      const block =
+        k === 'Enter' || k === ' ' || k === 'Spacebar' ||
+        k === 'ArrowDown' || k === 'ArrowUp' ||
+        k === 'ArrowLeft' || k === 'ArrowRight' ||
+        k === 'PageDown' || k === 'PageUp' ||
+        k === 'Home' || k === 'End' || k === 'F4' ||
+        (e.altKey && k === 'ArrowDown');
+      if (block) { e.preventDefault(); e.stopPropagation(); }
+    });
+
+    // If something changes it programmatically, revert
+    const initial = el.value;
+    el.addEventListener('change', function (e) {
+      if (this.value !== initial) {
+        this.value = initial;
+        try { this.dispatchEvent(new Event('change', { bubbles: true })); } catch {}
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  }
+
+  function hideChevron(el) {
+    el.setAttribute('data-ro-select', '1'); // CSS hook
+    el.classList.add('readonly');
+  }
+
+  // opts:
+  //   ariaDisabled: boolean (default true) — if true, set aria-disabled="true"
+  function makeReadOnlySelect(target, opts) {
+    const conf = Object.assign({ ariaDisabled: true }, opts);
+    const els = getList(target);
+    els.forEach(el => {
+      if (!el || el.tagName !== 'SELECT') return;
+
+      // Keep it focusable
+      el.removeAttribute('disabled');
+      el.removeAttribute('readonly'); // not supported on <select>
+
+      // Announce non-interactive state without adding hint text
+      if (conf.ariaDisabled) el.setAttribute('aria-disabled', 'true'); else el.removeAttribute('aria-disabled');
+
+      hideChevron(el);
+      bindGuards(el);
+    });
+  }
+
+  function reapplyOnPartialPostback(selector, opts) {
+    try {
+      const prm = w.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+      if (prm) prm.add_endRequest(function () { makeReadOnlySelect(selector, opts); });
+    } catch {}
+  }
+
+  w.ReadOnlySelect = w.ReadOnlySelect || { make: makeReadOnlySelect, reapply: reapplyOnPartialPostback };
+})(window);
+
+
+// Make a text <input> read-only but tabbable & SR-clear (GCWeb/WET4 friendly)
+window.TabbableReadOnly = {
+  make(sel, { ariaDisabled = true, label = null } = {}) {
+    const el = document.querySelector(sel);
+    if (!el) return false;
+
+    // 1) Keep it focusable (in Tab order)
+    el.removeAttribute('disabled');          // disabled => not tabbable
+    el.classList?.remove('aspNetDisabled');  // some themes block focus via this class
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+
+    // 2) Not editable
+    el.readOnly = true;
+    el.setAttribute('aria-readonly', 'true');
+
+    // 3) SR announcement
+    if (ariaDisabled) el.setAttribute('aria-disabled', 'true');
+    else el.removeAttribute('aria-disabled');
+
+    // 4) Prefer the visible label for SR name
+    let labEl = null;
+    if (label) {
+      labEl = document.querySelector(label);
+    } else if (el.id) {
+      labEl = document.querySelector(`label[for="${el.id}"]`) ||
+              document.getElementById(`${el.id}_label`);
+    }
+    if (labEl) {
+      if (!labEl.id) labEl.id = `${el.id || 'fld'}_label_fix`;
+      el.setAttribute('aria-labelledby', labEl.id);
+      if (el.id && labEl.getAttribute('for') !== el.id) labEl.setAttribute('for', el.id);
+      el.removeAttribute('aria-label'); // avoid double/contradictory names
+    }
+
+    el.classList.add('readonly'); // purely cosmetic; ensure your CSS for .readonly doesn’t set pointer-events:none
+    return true;
+  },
+
+  reapply(sel, opts) {
+    const prm = window.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+    if (prm) prm.add_endRequest(() => window.TabbableReadOnly.make(sel, opts));
+  }
+};
+
+// ReadOnlyRadioGroup (GCWeb/WET4 friendly)
+// Usage (after the group is rendered):
+//   ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
+//   ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact');  // for partial postbacks
+(function (w, d) {
+  'use strict';
+
+  function getContainer(arg) {
+    if (!arg) return null;
+    if (typeof arg === 'string') return d.querySelector(arg);
+    if (arg.container) return d.querySelector(arg.container);
+    return (arg instanceof Element) ? arg : null;
+  }
+  function getRadios(container, explicitName) {
+    if (!container) return [];
+    if (explicitName) {
+      const safe = explicitName.replace(/"/g, '\\"');
+      return Array.from(container.querySelectorAll('input[type="radio"][name="' + safe + '"]'));
+    }
+    return Array.from(container.querySelectorAll('input[type="radio"]'));
+  }
+  function ensureRoleAndLabel(container, opts) {
+    if (!container) return;
+    if (!container.hasAttribute('role')) container.setAttribute('role', 'radiogroup');
+
+    // Prefer an explicit label selector; else try common PP patterns (legend/label cell)
+    let labelEl = null;
+    if (opts && opts.label) labelEl = d.querySelector(opts.label);
+    if (!labelEl) labelEl = container.querySelector('legend, .field-label, label');
+    if (!labelEl) {
+      const labCell = container.closest('td')?.previousElementSibling;
+      if (labCell) labelEl = labCell.querySelector('label, .field-label');
+    }
+    if (labelEl) {
+      if (!labelEl.id) labelEl.id = (container.id || 'rg') + '_label';
+      container.setAttribute('aria-labelledby', labelEl.id);
+    }
+  }
+  function removeDisabledState(container, radios) {
+    // Some PP templates wrap with disabled attrs/classes — strip them so Tab works
+    container.removeAttribute('disabled');
+    container.classList?.remove('aspNetDisabled');
+    radios.forEach(r => {
+      r.removeAttribute('disabled');
+      r.classList?.remove('aspNetDisabled');
+    });
+  }
+  function setAriaDisabled(container, radios, state) {
+    container.setAttribute('aria-disabled', state ? 'true' : 'false');
+    radios.forEach(r => r.setAttribute('aria-disabled', state ? 'true' : 'false'));
+  }
+  function normalizeTabOrder(radios) {
+    let checked = radios.find(r => r.checked) || radios[0];
+    radios.forEach(r => r.tabIndex = -1);
+    if (checked) checked.tabIndex = 0;
+  }
+  function bindGuards(container, radios) {
+    if (container.dataset.roRadios === '1') {
+      // Re-run normalization in case selection changed programmatically
+      normalizeTabOrder(radios);
+      return;
+    }
+    container.dataset.roRadios = '1';
+
+    radios.forEach(r => {
+      if (r.dataset.roBound === '1') return;
+      r.dataset.roBound = '1';
+
+      // Keep focus but prevent toggling via mouse
+      r.addEventListener('mousedown', function (e) { e.preventDefault(); this.focus(); });
+      r.addEventListener('click', function (e) { e.preventDefault(); });
+
+      // Prevent Space/Enter/Arrows/Home/End from changing selection
+      r.addEventListener('keydown', function (e) {
+        const k = e.key;
+        if (k === 'Tab') return;
+        if (k === ' ' || k === 'Spacebar' || k === 'Enter' ||
+            k === 'ArrowLeft' || k === 'ArrowRight' ||
+            k === 'ArrowUp' || k === 'ArrowDown' ||
+            k === 'Home' || k === 'End') {
+          e.preventDefault(); e.stopPropagation();
+        }
+      });
+
+      // If something flips it programmatically, snap back to the default
+      const def = r.defaultChecked;
+      r.addEventListener('change', function (e) {
+        if (this.checked !== def) {
+          this.checked = def;
+          normalizeTabOrder(radios);
+        }
+        e.preventDefault(); e.stopPropagation();
+      });
+
+      // Prevent associated label from toggling
+      if (r.id) {
+        const lab = container.querySelector('label[for="' + r.id + '"]');
+        if (lab && !lab.dataset.roLabel) {
+          lab.dataset.roLabel = '1';
+          lab.addEventListener('click', function (e) { e.preventDefault(); });
+        }
+      }
+    });
+
+    normalizeTabOrder(radios);
+  }
+
+  function apply(arg) {
+    const container = getContainer(arg);
+    if (!container) return false;
+
+    // Optionally narrow radios by name: ReadOnlyRadioGroup.make({container:'#x', name:'myName'})
+    const name = (arg && arg.name) ? arg.name : null;
+    const radios = getRadios(container, name);
+    if (!radios.length) return false;
+
+    ensureRoleAndLabel(container, arg || {});
+    removeDisabledState(container, radios);
+    setAriaDisabled(container, radios, true);
+    bindGuards(container, radios);
+    return true;
+  }
+
+  function make(arg) { return apply(arg); }
+
+  function reapply(arg) {
+    try {
+      const prm = w.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+      if (prm) prm.add_endRequest(() => apply(arg));
+    } catch {}
+  }
+
+  w.ReadOnlyRadioGroup = w.ReadOnlyRadioGroup || { make, reapply };
+})(window, document);
+
+//Link a group label to a radiogroup and route clicks to the checked radio
+window.BindRadioGroupLabel = {
+  make({ group, label }) {
+    const g = typeof group === 'string' ? document.querySelector(group) : group;
+    const l = typeof label === 'string' ? document.querySelector(label) : label;
+    if (!g || !l) return false;
+
+    // 1) Ensure radiogroup semantics and association
+    if (!g.hasAttribute('role')) g.setAttribute('role', 'radiogroup');
+    if (!l.id) l.id = (g.id || 'rg') + '_label';
+    g.setAttribute('aria-labelledby', l.id);
+
+    // 2) Keep native per-option labels as-is; for the big label, make it a focus helper
+    l.removeAttribute('for'); // avoid pointing to the wrong thing
+    l.addEventListener('click', function (e) {
+      e.preventDefault();
+      // focus the currently checked radio (or first radio as fallback)
+      const radios = g.querySelectorAll('input[type="radio"]');
+      const checked = Array.from(radios).find(r => r.checked) || radios[0];
+      try { checked?.focus(); } catch {}
+    }, { passive: false });
+
+    return true;
+  }
+};
+
+// Remove native tooltips from form controls (inputs, selects, textareas, buttons)
+// Runs on load, after partial postbacks, and on dynamic insertions.
+(function (w, d) {
+  'use strict';
+
+  function stripTooltips(scope) {
+    var root = scope || d;
+    // Only form controls (avoid killing <abbr title> etc.)
+    var sel = 'input[title], select[title], textarea[title], button[title], [role="button"][title]';
+    root.querySelectorAll(sel).forEach(function (el) {
+      // allow opt-out per element
+      if (el.hasAttribute('data-keep-title')) return;
+      el.removeAttribute('title');
+    });
+  }
+
+  function install() {
+    // DOM ready
+    if (d.readyState === 'loading') {
+      d.addEventListener('DOMContentLoaded', function () { stripTooltips(d); }, { once: true });
+    } else {
+      stripTooltips(d);
+    }
+
+    // Power Pages / WebForms partial postbacks
+    try {
+      var prm = w.Sys?.WebForms?.PageRequestManager?.getInstance?.();
+      if (prm) prm.add_endRequest(function () { stripTooltips(d); });
+    } catch {}
+
+    // Dynamic nodes (lookups, date/time widgets, etc.)
+    try {
+      var mo = new MutationObserver(function (muts) {
+        for (var m of muts) {
+          for (var n of m.addedNodes || []) {
+            if (n.nodeType === 1) stripTooltips(n);
+          }
+        }
+      });
+      mo.observe(d.body, { childList: true, subtree: true });
+    } catch {}
+  }
+
+  w.StripFormTooltips = w.StripFormTooltips || { run: stripTooltips, install: install };
+  w.StripFormTooltips.install();
+})(window, document);
+
+
+// Disable native browser validation bubbles; rely on custom summary/inline errors
+(function () {
+  function novalidateAll() {
+    document.querySelectorAll('form').forEach(function (f) { f.setAttribute('novalidate', 'novalidate'); });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', novalidateAll, { once: true });
+  } else {
+    novalidateAll();
+  }
+})();
+
+// Hook Page_ClientValidate so that ANY submit path (real Next or reCAPTCHA "fake Next")
+// activates the live change/blur pipeline exactly once.
+(function () {
+  var previous = window.Page_ClientValidate;
+  if (typeof previous !== 'function') {
+    console.log('[WET-PP] Page_ClientValidate not found; live handler wrapper skipped');
+    return;
+  }
+
+  window.Page_ClientValidate = function (validationGroup) {
+    // First submit attempt from ANY caller (Next button, fake Next, other scripts)
+    if (!window.__validators_active) {
+      window.__validators_focusSummaryNow = true;
+      try { ensureLiveChangeHandlers(); } catch (e) {
+        console.log('[WET-PP] Page_ClientValidate wrapper: ensureLiveChangeHandlers error',
+                    e && e.message);
+      }
+    }
+
+    // Run the original Page_ClientValidate (this sets Page_IsValid etc.)
+    var result = previous(validationGroup);
+
+
+    // Run the original Page_ClientValidate (this sets Page_IsValid etc.)
+    // globalEvaluationFunction will be invoked via the global validator
+    // that we pushed into Page_Validators.
+
+    // Always repaint summary + inline errors after validation
+    // if (typeof globalEvaluationFunction === 'function') {
+    //   try { globalEvaluationFunction(); } catch (e) {
+    //     console.log('[WET-PP] Page_ClientValidate wrapper: globalEvaluationFunction error',
+    //                 e && e.message);
+    //   }
+    // }
+
+    return result;
+  };
+})();
 
