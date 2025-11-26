@@ -35,12 +35,15 @@ window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or 
   var lang = $('html').attr('data-lang') || "en";
 
   const styleString = "outline: none;border: none; width: 50%";
-// Read-only summary: strip required class to prevent visual asterisks
-$('.crmEntityFormView .table-info.required').removeClass('required');
+// Read-only summary: strip required cues so asterisks do not appear on locked fields
+const $form = $('.crmEntityFormView');
+$form.find('.table-info.required, .required').removeClass('required');
 // Also hide any lingering validator star containers
-$('.crmEntityFormView .validators').hide();
+$form.find('.validators').hide();
 // Prevent SR from announcing 'required' on read-only summary fields
-$('.crmEntityFormView [aria-required="true"]').removeAttr('aria-required');
+$form.find('[aria-required="true"]').removeAttr('aria-required');
+// Remove inline <abbr>*</abbr> marks that sometimes decorate required labels
+$form.find('abbr').filter(function () { return $(this).text().trim() === '*'; }).remove();
 
 // Report type (summary view): make it visually read-only and non-interactive
 // Keep SR + Tab working; no hints injected.
