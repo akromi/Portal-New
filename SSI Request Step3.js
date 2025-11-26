@@ -12,6 +12,11 @@ window.addEventListener("load", (e) => {
   $('#wb-sm').remove();
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
   
+  //set focus to document boday
+  $('body').attr('tabindex', '-1').focus();
+  setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+  window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
+
   $("select").each(function () {
     if (!$(this).parent().hasClass("select-icon")) {
       $(this).wrap('<div class="select-icon"></div>');
@@ -19,9 +24,14 @@ window.addEventListener("load", (e) => {
     }
   });
 
-     //Patch dropdowns to show the chevron.
-  // document.querySelectorAll('.crmEntityFormView .control select.form-control')
-  // .forEach(el => el.classList.add('select--bg-arrow'));
+  $('#ethi_uploadshipparticulars_input_file')
+    .attr('data-allowed-ext', 'pdf,jpg,png,gif')
+    .attr('data-max-bytes',  String(4 * 1024 * 1024));   // 4 MB default
+
+  $('#ethi_existingssc_input_file')
+    .attr('data-allowed-ext', 'pdf,jpg,png,gif')
+    .attr('data-max-bytes',  String(4 * 1024 * 1024));   // 4 MB default
+
 
   if ($("#ethi_otherregistryflag").val()) { $("#ethi_otherregistryflag").parent().parent().show() }
   else { $("#ethi_otherregistryflag").parent().parent().hide() };
@@ -114,12 +124,12 @@ window.addEventListener("load", (e) => {
           message_en: uploadShipParticularsLabel + " " + "{{snippets['ethi-requiredfield']}}",
           message_fr: uploadShipParticularsLabel + " " + "{{snippets['ethi-requiredfield']}}"
         },
-        { validator: validateFileNotZero,   
+        { validator: validateFileSizeZeroByte,   
           message_en: uploadShipParticularsLabel + " " + "This file is empty.", 
           message_fr: uploadShipParticularsLabel + " " + "Ce fichier est vide." 
         },
         {
-          validator: validateFileMaxSize,
+          validator: validateFileSizeMax,
           message_en: uploadShipParticularsLabel + " " + "{{snippets['ethi-file-size']}}",
           message_fr: uploadShipParticularsLabel + " " + "{{snippets['ethi-file-size']}}"
         },
@@ -141,12 +151,12 @@ window.addEventListener("load", (e) => {
           message_en: existingSscLabel + " " + "{{snippets['ethi-requiredfield']}}",
           message_fr: existingSscLabel + " " + "{{snippets['ethi-requiredfield']}}"
         },
-        { validator: validateFileNotZero,   
+        { validator: validateFileSizeZeroByte,   
           message_en: existingSscLabel + " " + "This file is empty.", 
           message_fr: existingSscLabel + " " + "Ce fichier est vide." 
         },
         {
-          validator: validateFileMaxSize,
+          validator: validateFileSizeMax,
           message_en: existingSscLabel + " " + "{{snippets['ethi-file-size']}}",
           message_fr: existingSscLabel + " " + "{{snippets['ethi-file-size']}}"
         },
@@ -175,18 +185,17 @@ relabelAllFileUploadControls();
 window.FILE_LOG_LEVEL = 'trace'; // or 'info' in PROD
 observeFileControls(); // initial pass + watch for redraws
 
-//window.FileInputUX.enableFileLinkOnPick('ethi_uploadshipparticulars');
-//window.FileInputUX.enableFileLinkOnPick('ethi_existingssc');
+//Also suppress PP’s stock inline file error blocks for these fields
 
-$('#ethi_uploadshipparticulars_input_file').attr('data-max-bytes', String(4 * 1024 * 1024));
-$('#ethi_existingssc_input_file').attr('data-max-bytes', String(4 * 1024 * 1024));
+if (window.suppressStockFileErrors) {
+    suppressStockFileErrors(['ethi_uploadshipparticulars', 'ethi_existingssc']);
+}
 
-window.suppressStockFileErrors([
-    'ethi_uploadshipparticulars',
-    'ethi_existingssc'
-]);
+if (window.FileStockSuppression && FileStockSuppression.enableForField) {
+    FileStockSuppression.enableForField('ethi_uploadshipparticulars');
+    FileStockSuppression.enableForField('ethi_existingssc');
+}
 
-//$('form').attr('novalidate','novalidate');
 
   return true;
 
