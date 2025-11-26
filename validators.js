@@ -308,6 +308,15 @@ function _isPickFlag(fin, key) {
 function _clearPickFlag(fin, key) {
   try { if (fin && fin.removeAttribute) fin.removeAttribute(key); } catch (_) {}
 }
+function _hasHiddenFilename(fieldId) {
+  if (!fieldId) return false;
+  const ids = [fieldId + '_hidden_filename', fieldId + 'hidden_filename'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && typeof el.value === 'string' && el.value.trim()) return true;
+  }
+  return false;
+}
 
 // Required — yield when any one-shot flag is set on this cycle
 // function validateFileSelected(source) {
@@ -328,26 +337,49 @@ function _clearPickFlag(fin, key) {
 //   var val = (fin.value || '').trim();
 //   return val.length > 0;
 // }
-function validateFileSelected(file, fieldId, ctx) {
-  // If no local file, but bridge sees a server-side file, treat as valid
-  if (!file) {
-    try {
-      if (window.FileStockSuppression &&
-          typeof window.FileStockSuppression.hasExistingServerFile === 'function' &&
-          window.FileStockSuppression.hasExistingServerFile(fieldId)) {
+function validateFileSelected(source) {
+  const fin = _resolveFileInput(source);
+  const fieldId = source && source.controltovalidate;
 
+  if (!fin) return false; // fail-closed for required
+
+  // If the bridge reports an existing server file, accept presence.
+  if (window.FileStockSuppression &&
+      typeof window.FileStockSuppression.hasExistingServerFile === 'function') {
+    try {
+      if (window.FileStockSuppression.hasExistingServerFile(fieldId)) {
         if (window.console && console.debug) {
-          console.debug('[validators] validateFileSelected: server file detected for', fieldId);
+          // silent: server file satisfies the required check
         }
-        return { valid: true };
+        return true;
       }
     } catch (e) {
       if (window.console && console.debug) {
-        console.debug('[validators] validateFileSelected: error probing server file for', fieldId, e);
+        // silent: ignore errors when probing server file presence
       }
       // fall through to normal logic
     }
   }
+
+  // If UI flagged this as a bad pick, skip Required for this cycle
+  if (_isPickFlag(fin, 'data-zero-byte-pick') ||
+      _isPickFlag(fin, 'data-oversize-pick') ||
+      _isPickFlag(fin, 'data-badtype-pick')) {
+    return true;
+  }
+
+  // Normal presence check
+  if (fin.files && typeof fin.files.length === 'number') {
+    return fin.files.length > 0;
+  }
+  const val = (fin.value || '').trim();
+  if (val.length > 0) return true;
+
+  // Final fallback: some flows pre-populate the partner hidden field with an
+  // existing filename even when no live file is present.
+  if (_hasHiddenFilename(fieldId)) return true;
+
+  return false;
 }
 /** Returns true unless a 0-byte file is picked (no message side-effects) */
 function validateFileSizeZeroByte(source) {
