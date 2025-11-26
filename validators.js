@@ -328,18 +328,21 @@ function _clearPickFlag(fin, key) {
 //   var val = (fin.value || '').trim();
 //   return val.length > 0;
 // }
-function validateFileSelected(file, fieldId, ctx) {
-  // If no local file, but bridge sees a server-side file, treat as valid
-  if (!file) {
-    try {
-      if (window.FileStockSuppression &&
-          typeof window.FileStockSuppression.hasExistingServerFile === 'function' &&
-          window.FileStockSuppression.hasExistingServerFile(fieldId)) {
+function validateFileSelected(source) {
+  const fin = _resolveFileInput(source);
+  const fieldId = source && source.controltovalidate;
 
+  if (!fin) return false; // fail-closed for required
+
+  // If the bridge reports an existing server file, accept presence.
+  if (window.FileStockSuppression &&
+      typeof window.FileStockSuppression.hasExistingServerFile === 'function') {
+    try {
+      if (window.FileStockSuppression.hasExistingServerFile(fieldId)) {
         if (window.console && console.debug) {
           console.debug('[validators] validateFileSelected: server file detected for', fieldId);
         }
-        return { valid: true };
+        return true;
       }
     } catch (e) {
       if (window.console && console.debug) {
@@ -348,6 +351,20 @@ function validateFileSelected(file, fieldId, ctx) {
       // fall through to normal logic
     }
   }
+
+  // If UI flagged this as a bad pick, skip Required for this cycle
+  if (_isPickFlag(fin, 'data-zero-byte-pick') ||
+      _isPickFlag(fin, 'data-oversize-pick') ||
+      _isPickFlag(fin, 'data-badtype-pick')) {
+    return true;
+  }
+
+  // Normal presence check
+  if (fin.files && typeof fin.files.length === 'number') {
+    return fin.files.length > 0;
+  }
+  const val = (fin.value || '').trim();
+  return val.length > 0;
 }
 /** Returns true unless a 0-byte file is picked (no message side-effects) */
 function validateFileSizeZeroByte(source) {
