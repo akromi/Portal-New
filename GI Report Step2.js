@@ -34,8 +34,12 @@ window.addEventListener("load", (e) => {
 window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
 
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
-  
+
   var lang = $('html').attr('data-lang') || "en";
+  // Final step: relabel the Next/Submit button to match the submit action
+  const submitLabel = /^fr/i.test(lang) ? 'Soumettre' : 'Submit';
+  $('#NextButton').val(submitLabel);
+  $('#captcha').text(submitLabel);
 
   const styleString = "outline: none;border: none; width: 50%";
 // Read-only summary: strip required cues so asterisks do not appear on locked fields

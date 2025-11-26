@@ -45,9 +45,13 @@ window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or 
     $("#ethi_existingssc_delete_button").hide();
 
     var lang = "{{ website.selected_language.code }}";
+    // Final step: show “Submit” on the action button
+    const submitLabel = /^fr/i.test(lang) ? 'Soumettre' : 'Submit';
+    $('#NextButton').val(submitLabel);
+    $('#captcha').text(submitLabel);
 
     if($("#ethi_invoicecountry").val() =="f23dc860-6f39-ef11-a317-000d3af44283")
-        { 
+        {
             $("div #ethi_invoiceprovincestate_label").parent().parent().css("display","none");
             $("div #ethi_invoicepostalcodezipcode_label").parent().parent().css("display","none");
             $("div #ethi_invoiceprovince_label").parent().parent().css("display","block");
