@@ -308,6 +308,15 @@ function _isPickFlag(fin, key) {
 function _clearPickFlag(fin, key) {
   try { if (fin && fin.removeAttribute) fin.removeAttribute(key); } catch (_) {}
 }
+function _hasHiddenFilename(fieldId) {
+  if (!fieldId) return false;
+  const ids = [fieldId + '_hidden_filename', fieldId + 'hidden_filename'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el && typeof el.value === 'string' && el.value.trim()) return true;
+  }
+  return false;
+}
 
 // Required — yield when any one-shot flag is set on this cycle
 // function validateFileSelected(source) {
@@ -364,7 +373,13 @@ function validateFileSelected(source) {
     return fin.files.length > 0;
   }
   const val = (fin.value || '').trim();
-  return val.length > 0;
+  if (val.length > 0) return true;
+
+  // Final fallback: some flows pre-populate the partner hidden field with an
+  // existing filename even when no live file is present.
+  if (_hasHiddenFilename(fieldId)) return true;
+
+  return false;
 }
 /** Returns true unless a 0-byte file is picked (no message side-effects) */
 function validateFileSizeZeroByte(source) {
