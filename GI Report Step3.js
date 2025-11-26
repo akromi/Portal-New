@@ -16,17 +16,6 @@ window.addEventListener('load', () => {
   function qs(sel, root) { return (root || document).querySelector(sel); }
   function qsa(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
   function setText(el, text) { if (el) el.textContent = text; }
-  // function ensureProgFocusable(el) {
-  //   if (!el) return;
-  //   if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1"); // NOT tabbable
-  // }
-  // function focusHeadingOnce(selector) {
-  //   const h = qs(selector) || qs("#wb-cont") || qs("main[role='main'] h1, main[role='main'] h2");
-  //   if (!h) return;
-  //   ensureProgFocusable(h);
-  //   try { h.focus({ preventScroll: false }); } catch { h.focus(); }
-  // }
-
   try {
     // --- step id ------------------------------------------------------------
     const params = new URLSearchParams(window.location.search);
