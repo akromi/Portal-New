@@ -1,10 +1,35 @@
 //Step 2
-$(document).ready(function(){
+window.addEventListener("load", (e) => {
+
   debugger;
+  document.title =   "{{snippets['ethi-gi-step2-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
+
+  //Using an immediately invoked function expression, to remove "basic form form" via aria-label + role for accessibility
+(function removeBasicFormAria() { 
+  document.querySelectorAll('[aria-label]').forEach(el => {
+    const v = el.getAttribute('aria-label');
+    if (v && /basic\s*form/i.test(v)) {
+      el.removeAttribute('aria-label');
+      if (el.getAttribute('role') === 'form') {
+        el.removeAttribute('role');
+      }
+    }
+  });
+})();
+
   //update web template for accessibility
   $("#wb-lng").attr("class","text-right");
   $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
   $('#wb-sm').remove();
+  $("input").removeAttr("placeholder");
+  //$('body').classList.add('read-only-summary');
+  //$('#wb-tphp a.wb-sl')?.focus(); // should focus the skip link
+
+  $('body').attr('tabindex', '-1').focus();
+  setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+
+window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
+
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
   
   var lang = $('html').attr('data-lang') || "en";
@@ -17,23 +42,38 @@ $('.crmEntityFormView .validators').hide();
 // Prevent SR from announcing 'required' on read-only summary fields
 $('.crmEntityFormView [aria-required="true"]').removeAttr('aria-required');
 
+// Report type (summary view): make it visually read-only and non-interactive
+// Keep SR + Tab working; no hints injected.
+window.ReadOnlySelect?.make('#ethi_reporttype', { ariaDisabled: true});
+window.ReadOnlySelect?.reapply('#ethi_reporttype', { ariaDisabled: true });
+
+TabbableReadOnly.make('#ethi_nextport_name', { ariaDisabled: true, label: '#ethi_nextport_label' });
+TabbableReadOnly.reapply('#ethi_nextport_name', { ariaDisabled: true, label: '#ethi_nextport_label' });
+
+// Make the “Submitter is medical contact?” radios tabbable but read-only
+ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
+ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial postbacks
+BindRadioGroupLabel.make({
+  group: '#ethi_submitterismedicalcontact',
+  label: '#ethi_submitterismedicalcontact_label'
+});
 
   $("select").css({"width": "100%"})
   $("input:not([type='radio'])").css({"width": "100%"});
-  $("#ethi_nextcanadadate").attr('style', styleString);
+  //$("#ethi_nextcanadadate").attr('style', styleString);
 
-  $("#ethi_nextcanadatime").attr('style', styleString);
+  //$("#ethi_nextcanadatime").attr('style', styleString);
 
-  $("#ethi_embarkationdate").attr("type","date").css('line-height','30px');
-  $("#ethi_disembarkationdate").attr("type","date").css('line-height','30px');
+  //$("#ethi_embarkationdate").attr("type","date").css('line-height','30px');
+  //$("#ethi_disembarkationdate").attr("type","date").css('line-height','30px');
 
   $("input").removeAttr("placeholder");
-
-  document.title =   "{{snippets['ethi-gi-step2-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
 
   $('h2.tab-title')
   .text("{{ snippets['ethi-gi-step2-title'] }}")
   .css({ display:'flex', 'justify-content':'flex-start', 'align-items':'center', height:'80px' });
+
+
 
   params = new URLSearchParams(window.location.search);
   $("#ethi_stepid").val(params.get("stepid"));
@@ -70,6 +110,14 @@ $('.crmEntityFormView [aria-required="true"]').removeAttr('aria-required');
   const $f = $("#ethi_nextcanadadateandtimeportal");
   console.log('found:', $f.length, 'tag:', $f.prop('tagName'), 'type:', $f.attr('type'));
   console.log('val():', $f.val(), 'text():', $f.text());
+
+// Remove native tooltips on read-only summary pages (inputs/selects/textareas only)
+ $('.crmEntityFormView input[title], .crmEntityFormView select[title], .crmEntityFormView textarea[title]')
+    .each(function () {
+      // keep a breadcrumb for debugging if you want
+      $(this).attr('data-title-removed', $(this).attr('title'));
+      this.removeAttribute('title');
+    });
 
 });
 
