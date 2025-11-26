@@ -85,8 +85,8 @@ function sanitizeFileButtons() {
    ============================================================ */
 
 (function () {
-  const LOG  = (...a)=>console.log('[file-clean]', ...a);
-  const DBG  = (...a)=>console.log('%c[file-clean:dbg]','color:#888', ...a);
+  const LOG  = () => {};
+  const DBG  = () => {};
 
   // Disable/hide built-in Required validator for a given base id
   function disableRequiredHidden(baseId){

@@ -1,7 +1,6 @@
 //Step 2
 window.addEventListener("load", (e) => {
 
-  debugger;
   document.title =   "{{snippets['ethi-gi-step2-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
 
   //Using an immediately invoked function expression, to remove "basic form form" via aria-label + role for accessibility
@@ -112,10 +111,6 @@ BindRadioGroupLabel.make({
   $("#ethi_nextcanadadateandtimeportal").val($("#ethi_nextcanadadate").val() + " " + $("#ethi_nextcanadatime").val());
 
   //console.log($("#ethi_nextcanadadateandtimeportal").val());
-  const $f = $("#ethi_nextcanadadateandtimeportal");
-  console.log('found:', $f.length, 'tag:', $f.prop('tagName'), 'type:', $f.attr('type'));
-  console.log('val():', $f.val(), 'text():', $f.text());
-
 // Remove native tooltips on read-only summary pages (inputs/selects/textareas only)
  $('.crmEntityFormView input[title], .crmEntityFormView select[title], .crmEntityFormView textarea[title]')
     .each(function () {

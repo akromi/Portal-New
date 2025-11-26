@@ -103,7 +103,6 @@ BindRadioGroupLabel.make({
 
 // Format date to 'yyyy-mm-dd hh:mm AM/PM'
 const formatDateToYYYYMMDD12Hour = (date) => {
-    debugger;
     const year = date.getUTCFullYear(); // Get UTC year
     const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Get UTC month (0-based)
     const day = String(date.getUTCDate()).padStart(2, '0'); // Get UTC day

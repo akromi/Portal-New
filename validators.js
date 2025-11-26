@@ -349,13 +349,13 @@ function validateFileSelected(source) {
     try {
       if (window.FileStockSuppression.hasExistingServerFile(fieldId)) {
         if (window.console && console.debug) {
-          console.debug('[validators] validateFileSelected: server file detected for', fieldId);
+          // silent: server file satisfies the required check
         }
         return true;
       }
     } catch (e) {
       if (window.console && console.debug) {
-        console.debug('[validators] validateFileSelected: error probing server file for', fieldId, e);
+        // silent: ignore errors when probing server file presence
       }
       // fall through to normal logic
     }
