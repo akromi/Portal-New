@@ -13,6 +13,12 @@ window.addEventListener("load", (e) => {
 
   $('#wb-sm').remove();
   $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
+
+    //set focus to document body
+  $('body').attr('tabindex', '-1').focus();
+  setTimeout(function () { $('body').removeAttr('tabindex'); }, 0);
+  window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or omit mode to actually focus
+
   //this makes the comments box more responsive.
   $('#ethi_additionalcomments').removeAttr('cols');
 
