@@ -294,287 +294,180 @@ function fileI18n() {
     return raw ? raw.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean) : ['pdf','jpg','png','gif'];
   }
 
-  // Public API (attach on window)
-  window.relabelAllFileUploadControls = function relabelAllFileUploadControls() {
-    const t0 = performance.now();
-    const T = _i18n();
 
-    // include both PP variants
-    const $blocks = $('.file-control-container, .container-file-input');
-    logger.info('relabelAllFileUploadControls: start; containers=%d', $blocks.length);
+// fileInput.js — DROP-IN REPLACEMENT
+// UI-only relabeling for Power Pages file inputs (no validation here).
+// - Updates filename text, Choose/Change/Delete labels + ARIA
+// - Shows/hides Delete button based on selection
+// - Idempotent event handlers, compatible with PP redraws
+window.relabelAllFileUploadControls = function relabelAllFileUploadControls() {
+  const t0 = performance.now();
+  const T = _i18n();
 
-    $blocks.each(function (idx) {
-      const b0 = performance.now();
-      const $block = $(this);
-      const $chooseBtn = $block.find('button.btn-for-file-input').first();
-      const $delBtn = $block.find('button.btn-for-delete').first();
-      const $input = $block.find('input[type="file"]').first();
-      const $nameBox = $block.find('.file-name-container').first();
-      const $textDiv = $nameBox.find('div').first();
-      const $hiddenSpan = $nameBox.find('span[id$="_file_name"]').first();
+  // Both PP variants
+  const $blocks = $('.file-control-container, .container-file-input');
+  logger.info('relabelAllFileUploadControls: start; containers=%d', $blocks.length);
 
-      try {
-        // 1) Stop clobbering aria-labelledby; only drop junk attrs
-        const beforeAttrs = {
-          choose_title: $chooseBtn.attr('title'),
-          choose_ariaLabelledby: $chooseBtn.attr('aria-labelledby'),
-          choose_required: $chooseBtn.attr('required'),
-          del_title: $delBtn.attr('title')
-        };
-        $chooseBtn.removeAttr('title required');    // DO NOT remove aria-labelledby here
-        if ($delBtn.length) $delBtn.removeAttr('title');
-        logger.trace('block[%d]: cleaned attrs', idx, beforeAttrs);
+  $blocks.each(function (idx) {
+    const b0 = performance.now();
+    const $block = $(this);
+    const $chooseBtn = $block.find('button.btn-for-file-input').first();
+    const $delBtn = $block.find('button.btn-for-delete').first();
+    const $input = $block.find('input[type="file"]').first();
+    const $nameBox = $block.find('.file-name-container').first();
+    const $textDiv = $nameBox.find('div').first();
+    const $hiddenSpan = $nameBox.find('span[id$="_file_name"]').first(); // server-provided name (if any)
 
-        // 2) Robust label lookup: label[for="<input id>"] within the nearest container
-        let labelId = '';
-        if ($input.length) {
-          const $label = $block.closest('.cell, td, .form-group')
-            .find(`label[for="${$input.attr('id')}"]`).first();
-          if ($label.length) labelId = $label.attr('id') || '';
-        }
+    try {
+      // 1) Stop clobbering aria-labelledby; only drop junk attrs
+      const beforeAttrs = {
+        choose_title: $chooseBtn.attr('title'),
+        choose_ariaLabelledby: $chooseBtn.attr('aria-labelledby'),
+        del_title: $delBtn.attr('title'),
+        del_ariaLabelledby: $delBtn.attr('aria-labelledby')
+      };
+      $chooseBtn.removeAttr('title aria-labelledby');
+      $delBtn.removeAttr('title aria-labelledby');
 
-        // 3) Apply if different; otherwise leave existing correct wiring intact
-        if (labelId && $chooseBtn.attr('aria-labelledby') !== labelId) {
-          $chooseBtn.attr('aria-labelledby', labelId);
-          logger.debug('block[%d]: set aria-labelledby -> %s', idx, labelId);
-        } else if (!labelId) {
-          // If a stale aria-labelledby points to a non-existent node, remove it
-          const cur = $chooseBtn.attr('aria-labelledby');
-          if (cur && !document.getElementById(cur)) $chooseBtn.removeAttr('aria-labelledby');
-        }
-
-
-        // 4) Always keep aria-controls in sync with the real input
-        if ($input.length) {
-          const inputId = $input.attr('id');
-          if ($chooseBtn.attr('aria-controls') !== inputId) {
-            $chooseBtn.attr('aria-controls', inputId);
-            logger.debug('block[%d]: set aria-controls -> %s', idx, inputId);
-          }
-        }
-
-        // Determine current state / hasFile
-        const visibleText = ($textDiv.text() || '').trim();
-        const hiddenName = ($hiddenSpan.text() || '').trim();
-        const nativeLen = $input.get(0)?.files?.length || 0;
-        const hasFile = !!(nativeLen || hiddenName || (visibleText && visibleText !== T.none));
-        logger.debug('block[%d]: state: visibleText=%o hiddenSpan=%o nativeFiles=%d hasFile=%s',
-          idx, visibleText, hiddenName, nativeLen, hasFile);
-          
-        // Idempotent labels for Choose/Change
-        const desiredChoose = hasFile ? T.change : T.choose;
-        const prevChooseTxt = $chooseBtn.text().trim();
-        if (prevChooseTxt !== desiredChoose) {
-          $chooseBtn.text(desiredChoose);
-          logger.info('block[%d]: chooseBtn text: %o -> %o', idx, prevChooseTxt, desiredChoose);
-        }
-        const prevChooseAria = $chooseBtn.attr('aria-label');
-        if (prevChooseAria !== desiredChoose) {
-          $chooseBtn.attr('aria-label', desiredChoose);
-          logger.debug('block[%d]: chooseBtn aria-label: %o -> %o', idx, prevChooseAria, desiredChoose);
-        }
-
-        // Delete button label + visibility
-        if ($delBtn.length) {
-          const $icon = $delBtn.find('.fa, .glyphicon, .iconforimage, i, svg').first();
-          const delHTML = $icon.length ? $icon.prop('outerHTML') + ' ' + T.delete : T.delete;
-          if ($delBtn.html().trim() !== delHTML.trim()) {
-            $delBtn.html(delHTML);
-            logger.info('block[%d]: deleteBtn html set', idx);
-          }
-          const prevDelAria = $delBtn.attr('aria-label');
-          if (prevDelAria !== T.delete) {
-            $delBtn.attr('aria-label', T.delete);
-            logger.debug('block[%d]: deleteBtn aria-label: %o -> %o', idx, prevDelAria, T.delete);
-          }
-          $delBtn.toggle(hasFile);
-          logger.debug('block[%d]: deleteBtn visibility -> %s', idx, hasFile ? 'show' : 'hide');
-        }
-
-        // One-time, namespaced handlers (avoid stacking)
-        $input.off('change.relabel').on('change.relabel', function (ev) {
-          const h0 = performance.now();
-          const TT = _i18n();
-          const file = this.files && this.files[0];
-          const idAttr = $input.attr('id') || '';
-          const baseId = idAttr.replace(/_input_file$/, '');
-          logger.info('block[%d]: onChange fired; hasFile=%s', idx, !!file);
-
-          // 0) One-shot revalidate guard (prevents loops on our synthetic revalidate)
-if ($input.attr('data-revalidate-once') === '1') {
-  $input.removeAttr('data-revalidate-once');
-  // Do NOT schedule any more changes here. Let other listeners (validators) run.
-  logger.debug('block[%d]: consumed data-revalidate-once; skip re-trigger logic', idx);
-  // Optional: skip our own relabel body to avoid extra DOM churn
-  // return;
-}
-          // --- precedence markers for file validators ---
-         if (file) {
-  // Zero-byte
-  if (file.size === 0) {
-    $input.attr('data-zero-byte-pick','1');
-
-    // Reset UI
-    try { this.value = ''; } catch (_) {}
-    $input.val('');
-    if ($hiddenSpan.length) $hiddenSpan.text('');
-    if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
-    if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
-    if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
-    if ($delBtn.length) $delBtn.hide();
-    $block.removeAttr('data-has-server-file');
-    if ($block.removeData) $block.removeData('has-server-file');
-    $input.attr('aria-invalid','true');
-
-    // Inline error (preempt "Required")
-    const msg = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr')
-      ? 'Le fichier sélectionné est vide.' : 'The selected file is empty.';
-    if (baseId) setInlineErrorForFile(baseId, msg);
-
-    // One-shot revalidate: mark and re-run jQuery handlers only (no native onchange)
-    $input.attr('data-revalidate-once','1');
-    Promise.resolve().then(() => { $input.triggerHandler('change'); });
-    logger.warn('block[%d]: zero-byte flagged; UI reset; revalidate queued (triggerHandler)', idx);
-    return;
-  }
-
-  // Oversize
-  const rawMax = $input.attr('data-max-bytes');
-  const maxBytes =
-    (rawMax && !isNaN(rawMax)) ? parseInt(rawMax, 10)
-    : (typeof window.DEFAULT_MAX_FILE_BYTES === 'number' ? window.DEFAULT_MAX_FILE_BYTES
-      : 4 * 1024 * 1024);
-  if (file.size > maxBytes) {
-    $input.attr('data-oversize-pick','1');
-
-    try { this.value = ''; } catch (_) {}
-    $input.val('');
-    if ($hiddenSpan.length) $hiddenSpan.text('');
-    if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
-    if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
-    if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
-    if ($delBtn.length) $delBtn.hide();
-    $block.removeAttr('data-has-server-file');
-    if ($block.removeData) $block.removeData('has-server-file');
-    $input.attr('aria-invalid','true');
-
-    const mb = (maxBytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '');
-    const msg = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr')
-      ? `Le fichier sélectionné est trop volumineux. Taille maximale : ${mb} Mo.`
-      : `The selected file is too large. Maximum allowed is ${mb} MB.`;
-    if (baseId) setInlineErrorForFile(baseId, msg);
-
-    $input.attr('data-revalidate-once','1');
-    Promise.resolve().then(() => { $input.triggerHandler('change'); });
-    logger.warn('block[%d]: oversize flagged; UI reset; revalidate queued (triggerHandler)', idx);
-    return;
-  }
-
-  // Bad type
-  const allowedStr = $input.attr('data-allowed-ext') || '';
-  const allowed = allowedStr ? allowedStr.split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean) : ['pdf','jpg','png','gif'];
-  const dot = String(file.name || '').lastIndexOf('.');
-  const ext = dot > 0 ? String(file.name).slice(dot + 1).toLowerCase() : '';
-  const okType = !!ext && allowed.indexOf(ext) !== -1;
-  if (!okType) {
-    $input.attr('data-badtype-pick','1');
-
-    try { this.value = ''; } catch (_) {}
-    $input.val('');
-    if ($hiddenSpan.length) $hiddenSpan.text('');
-    if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
-    if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
-    if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
-    if ($delBtn.length) $delBtn.hide();
-    $block.removeAttr('data-has-server-file');
-    if ($block.removeData) $block.removeData('has-server-file');
-    $input.attr('aria-invalid','true');
-
-    const list = allowed.join(', ');
-    const msg = (document.documentElement.getAttribute('lang') || 'en').toLowerCase().startsWith('fr')
-      ? `Le type de fichier sélectionné n'est pas autorisé. Types permis : ${list}.`
-      : `The selected file type is not allowed. Allowed types: ${list}.`;
-    if (baseId) setInlineErrorForFile(baseId, msg);
-
-    $input.attr('data-revalidate-once','1');
-    Promise.resolve().then(() => { $input.triggerHandler('change'); });
-    logger.warn('block[%d]: bad-type flagged; UI reset; revalidate queued (triggerHandler)', idx);
-    return;
-  }
-}
-
-          if (file) {
-
-            const prevHidden = $hiddenSpan.text();
-            const prevText = $textDiv.text();
-            if ($hiddenSpan.length) $hiddenSpan.text(file.name);
-            if ($textDiv.text().trim() !== file.name) $textDiv.text(file.name);
-            logger.debug('block[%d]: filename set: hidden=%o->%o, visible=%o->%o',
-              idx, prevHidden, file.name, prevText, file.name);
-
-            // Flip to "Change file" + ensure Delete visible
-            if ($chooseBtn.text().trim() !== TT.change) {
-              $chooseBtn.text(TT.change);
-              logger.info('block[%d]: chooseBtn -> Change', idx);
-            }
-            if ($chooseBtn.attr('aria-label') !== TT.change) {
-              $chooseBtn.attr('aria-label', TT.change);
-              logger.debug('block[%d]: chooseBtn aria-label -> Change', idx);
-            }
-
-            if ($delBtn.length) {
-              const $ic = $delBtn.find('.fa, .glyphicon, .iconforimage, i, svg').first();
-              const dHTML = $ic.length ? $ic.prop('outerHTML') + ' ' + TT.delete : TT.delete;
-              if ($delBtn.html().trim() !== dHTML.trim()) {
-                $delBtn.html(dHTML);
-                logger.debug('block[%d]: deleteBtn html refreshed', idx);
-              }
-              if ($delBtn.attr('aria-label') !== TT.delete) {
-                $delBtn.attr('aria-label', TT.delete);
-                logger.debug('block[%d]: deleteBtn aria-label set', idx);
-              }
-              $delBtn.show();
-            }
-          } else {
-            // Cleared via OS picker or code path
-            if ($hiddenSpan.length) $hiddenSpan.text('');
-            if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
-            if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
-            if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
-            if ($delBtn.length) $delBtn.hide();
-            logger.info('block[%d]: cleared selection -> reset to NONE', idx);
-          }
-
-          logger.trace('block[%d]: onChange duration=%dms', idx, Math.round(performance.now() - h0));
-        });
-
-        if ($delBtn.length) {
-          $delBtn.off('click.relabel').on('click.relabel', function (ev) {
-            ev.preventDefault();
-            const h0 = performance.now();
-            const TT = _i18n();
-
-            logger.info('block[%d]: deleteBtn clicked -> clearing input', idx);
-            $input.val('').trigger('change');   // notify PP validators too
-            if ($hiddenSpan.length) $hiddenSpan.text('');
-            if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
-            if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
-            if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
-            $delBtn.hide();
-
-            logger.trace('block[%d]: delete handler duration=%dms', idx, Math.round(performance.now() - h0));
-          });
-        }
-
-      } catch (e) {
-        logger.error('block[%d]: error during relabel', idx, e);
-      } finally {
-        logger.trace('block[%d]: duration=%dms', idx, Math.round(performance.now() - b0));
+      // 2) Ensure polite live region on the filename container
+      if ($nameBox.length) {
+        if ($nameBox.attr('role') !== 'status') $nameBox.attr('role', 'status');
+        if ($nameBox.attr('aria-live') !== 'polite') $nameBox.attr('aria-live', 'polite');
+        if ($nameBox.attr('aria-atomic') !== 'true') $nameBox.attr('aria-atomic', 'true');
       }
-    });
 
-    logger.info('relabelAllFileUploadControls: done in %dms', Math.round(performance.now() - t0));
-  };
+      logger.debug('block[%d]: cleaned attrs: %o', idx, beforeAttrs);
+    } catch (e) {
+      logger.warn('block[%d]: attribute cleanup failed: %o', idx, e);
+    }
+
+    // Initial state (server file or empty)
+    const hasServerFile = !!($block.data && $block.data('has-server-file')) || $block.attr('data-has-server-file') === '1';
+    const initialName = hasServerFile && $hiddenSpan.length ? $hiddenSpan.text().trim() : '';
+    const hasFile = !!initialName || (!!$input[0] && $input[0].files && $input[0].files.length > 0);
+
+    // Choose/Change label
+    const desiredChoose = hasFile ? T.change : T.choose;
+    const prevChooseTxt = $chooseBtn.text().trim();
+    if (prevChooseTxt !== desiredChoose) {
+      $chooseBtn.text(desiredChoose);
+      logger.info('block[%d]: chooseBtn text: %o -> %o', idx, prevChooseTxt, desiredChoose);
+    }
+    const prevChooseAria = $chooseBtn.attr('aria-label');
+    if (prevChooseAria !== desiredChoose) {
+      $chooseBtn.attr('aria-label', desiredChoose);
+      logger.debug('block[%d]: chooseBtn aria-label: %o -> %o', idx, prevChooseAria, desiredChoose);
+    }
+
+    // Delete button label + visibility
+    if ($delBtn.length) {
+      const $icon = $delBtn.find('.fa, .glyphicon, .iconforimage, i, svg').first();
+      const delHTML = $icon.length ? ($icon.prop('outerHTML') + ' ' + T.delete) : T.delete;
+      if ($delBtn.html().trim() !== delHTML.trim()) {
+        $delBtn.html(delHTML);
+        logger.info('block[%d]: deleteBtn html set', idx);
+      }
+      const prevDelAria = $delBtn.attr('aria-label');
+      if (prevDelAria !== T.delete) {
+        $delBtn.attr('aria-label', T.delete);
+        logger.debug('block[%d]: deleteBtn aria-label: %o -> %o', idx, prevDelAria, T.delete);
+      }
+      $delBtn.toggle(hasFile);
+      logger.debug('block[%d]: deleteBtn visibility -> %s', idx, hasFile ? 'show' : 'hide');
+    }
+
+
+    // Initial filename text
+if ($textDiv.length) {
+  // If the native input already has a file (user just picked), prefer its name.
+  const liveName = ($input[0] && $input[0].files && $input[0].files[0])
+    ? ($input[0].files[0].name || '')
+    : '';
+
+  // If server had a previously uploaded file name, keep that; otherwise use liveName.
+  let wantText = hasFile ? (liveName || initialName || '') : T.none;
+
+  // Final fallback: no name → show "No file selected"
+  if (!wantText) wantText = T.none;
+
+  if ($textDiv.text().trim() !== wantText) {
+    $textDiv.text(wantText);
+    logger.debug('block[%d]: filename text init -> %o', idx, wantText);
+  }
+}
+
+
+    $input.off('change.relabel').on('change.relabel', function () {
+  // Let PP's inline fileLoad(...) finish first, then take over the UI.
+  setTimeout(() => {
+    const h0 = performance.now();
+    const TT = _i18n();
+    const fin = this;
+    const file = fin.files && fin.files[0];
+
+    if (file) {
+      // 1) Update visible filename
+      if ($hiddenSpan.length) $hiddenSpan.text(file.name);
+      if ($textDiv.text().trim() !== file.name) $textDiv.text(file.name);
+
+      // 2) Button labels/ARIA
+      if ($chooseBtn.text().trim() !== TT.change) $chooseBtn.text(TT.change);
+      if ($chooseBtn.attr('aria-label') !== TT.change) $chooseBtn.attr('aria-label', TT.change);
+
+      // 3) Show delete, fix ARIA if needed
+      if ($delBtn.length) {
+        if (!$delBtn.is(':visible')) $delBtn.show();
+        if ($delBtn.attr('aria-label') !== TT.delete) $delBtn.attr('aria-label', TT.delete);
+      }
+
+      // 4) Clear any server-file hint so we don’t revert to old name later
+      $block.removeAttr('data-has-server-file');
+      if ($block.removeData) $block.removeData('has-server-file');
+
+    } else {
+      // Cleared
+      if ($hiddenSpan.length) $hiddenSpan.text('');
+      if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
+      if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
+      if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
+      if ($delBtn.length) $delBtn.hide();
+      logger.info('block[%d]: cleared selection -> reset to NONE', idx);
+    }
+
+    logger.trace('block[%d]: onChange duration=%dms', idx, Math.round(performance.now() - h0));
+  }, 0);
+});
+
+    if ($delBtn.length) {
+      $delBtn.off('click.relabel').on('click.relabel', function (ev) {
+        ev.preventDefault();
+        const h0 = performance.now();
+        const TT = _i18n();
+
+        logger.info('block[%d]: deleteBtn clicked -> clearing input', idx);
+        // Clear input and update UI (validators will observe the change)
+        try { $input.val(''); } catch (_) {}
+        $input.trigger('change');
+        if ($hiddenSpan.length) $hiddenSpan.text('');
+        if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
+        if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
+        if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
+        $delBtn.hide();
+
+        // Also clear any server-file hint
+        $block.removeAttr('data-has-server-file');
+        if ($block.removeData) $block.removeData('has-server-file');
+
+        logger.trace('block[%d]: deleteBtn handler duration=%dms', idx, Math.round(performance.now() - h0));
+      });
+    }
+
+    logger.trace('block[%d]: init duration=%dms', idx, Math.round(performance.now() - b0));
+  });
+
+  logger.info('relabelAllFileUploadControls: done in %dms', Math.round(performance.now() - t0));
+};
+
 
   // Single, debounced observer (re-applies after PP redraws)
   window.observeFileControls = function observeFileControls() {
@@ -637,79 +530,6 @@ if ($input.attr('data-revalidate-once') === '1') {
   // $(window.observeFileControls);
 
 })();
-
-
-
-// // fileInput.js
-// (function (w, $) {
-//   w.FileInputUX = w.FileInputUX || {};
-
-//   function escId(id) {
-//     if (w.CSS && CSS.escape) return '#' + CSS.escape(id);
-//     return '#' + String(id).replace(/([ #;?%&,.+*~':"!^$[\]()=>|\/@])/g, '\\$1');
-//   }
-
-//   w.FileInputUX.enableFileLinkOnPick = function enableFileLinkOnPick(fieldName) {
-//     const inputSel = escId(fieldName + '_input_file');
-//     const nameSpanSel = escId(fieldName + '_file_name');
-
-//     $(document).off('change.filelink.' + fieldName, inputSel)
-//       .on('change.filelink.' + fieldName, inputSel, function () {
-//         const input = this;
-//         const file = (input.files && input.files[0]) || null;
-
-//         const $block = $(input).closest('.file-control-container, .container-file-input');
-//         const $nameBox = $block.find('.file-name-container').first();
-
-//         let $a = $nameBox.find('a').first();
-//         let $text = $nameBox.children('div').first();
-
-//         if (!$a.length) {
-//           $a = $('<a target="_blank" rel="noopener"></a>');
-//           if ($text.length) { $text.before($a); $a.append($text.contents()); }
-//           else { $nameBox.prepend($a); }
-//         }
-
-//         if (!$a.data('origHref')) $a.data('origHref', $a.attr('href') || '');
-
-//         const revoke = () => {
-//           const u = $a.data('blobUrl');
-//           if (u) { URL.revokeObjectURL(u); $a.removeData('blobUrl'); }
-//         };
-
-//         if (!file) {
-//           revoke();
-//           const orig = $a.data('origHref');
-//           if (orig) $a.attr('href', orig);
-//           $a.hide();
-//           $text.show();
-//           return;
-//         }
-
-//         revoke();
-//         const url = URL.createObjectURL(file);
-
-//         $a.attr({ href: url, target: '_blank', rel: 'noopener', title: file.name })
-//           .data('blobUrl', url)
-//           .show();
-
-//         const $nameSpan = $nameBox.find(nameSpanSel);
-//         if ($nameSpan.length) $nameSpan.text(file.name); else $a.text(file.name);
-
-//         $text.hide();
-//       });
-//   };
-
-//   // Optional: clean up blob URLs on page unload
-//   w.addEventListener('beforeunload', () => {
-//     $('.file-name-container a').each(function () {
-//       const u = $(this).data('blobUrl'); if (u) URL.revokeObjectURL(u);
-//     });
-//   }, { once: true });
-
-// })(window, jQuery);
-
-
 
 /*
  * LookupLoader (unified) + LookupStore
@@ -1183,3 +1003,147 @@ function clearInlineErrorForFile(baseId) {
     if ($prev.is('br')) $prev.remove();
   }
 }
+
+/* ============================================================
+ * Power Pages table normalizer
+ * - Keeps hidden sections in DOM (logic-safe)
+ * - Fixes row column counts by adding neutral filler cells
+ *   or reducing colspans—no destructive deletions.
+ * - Idempotent; runs after partial postbacks.
+ * ============================================================ */
+(function () {
+  'use strict';
+
+  var DEBUG = true; // set false once verified
+  function log() { if (DEBUG) console.log('[PP-TABLE]', ...arguments); }
+
+  function onReady(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once: true });
+    } else { fn(); }
+  }
+
+  function getExpectedCols(table) {
+    // Prefer explicit columns from <colgroup>
+    var n = table.querySelectorAll(':scope > colgroup > col').length;
+    if (n) return n;
+
+    // Fallback: infer from the most common row width
+    var counts = Object.create(null), best = 3, max = 0;
+    table.querySelectorAll(':scope > tr, :scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr')
+      .forEach(function (tr) {
+        var w = rowWidth(tr);
+        counts[w] = (counts[w] || 0) + 1;
+        if (counts[w] > max) { max = counts[w]; best = w; }
+      });
+    return best;
+  }
+
+  function rowWidth(tr) {
+    var sum = 0;
+    for (var i = 0; i < tr.cells.length; i++) {
+      var td = tr.cells[i];
+      var span = parseInt(td.getAttribute('colspan') || '1', 10);
+      sum += (isNaN(span) || span < 1) ? 1 : span;
+    }
+    return sum;
+  }
+
+  function ensureWidth(tr, expected) {
+    var have = rowWidth(tr);
+    if (have === expected) return;
+
+    if (have < expected) {
+      // Add neutral filler cells before the trailing zero-cell if present
+      var deficit = expected - have;
+      var zero = findZeroCell(tr);
+      for (var i = 0; i < deficit; i++) {
+        var filler = document.createElement('td');
+        filler.className = 'cell zero-cell';
+        filler.setAttribute('data-td-fix', '1');
+        if (zero) tr.insertBefore(filler, zero); else tr.appendChild(filler);
+      }
+      log('Added', deficit, 'filler <td> to reach', expected, tr);
+      return;
+    }
+
+    // have > expected → shrink colspans non-destructively
+    var excess = have - expected;
+
+    // 1) Prefer shrinking the trailing zero-cell if it has colspan > 1
+    var zero = findZeroCell(tr);
+    if (zero && (zero.colSpan || 1) > 1) {
+      var reduce = Math.min(excess, zero.colSpan - 1);
+      zero.colSpan = zero.colSpan - reduce;
+      excess -= reduce;
+    }
+
+    // 2) Then shrink any previously-added filler cell with colspan > 1
+    if (excess > 0) {
+      var fillers = tr.querySelectorAll('td[data-td-fix]');
+      for (var j = fillers.length - 1; j >= 0 && excess > 0; j--) {
+        var f = fillers[j];
+        if ((f.colSpan || 1) > 1) {
+          var r = Math.min(excess, f.colSpan - 1);
+          f.colSpan = f.colSpan - r;
+          excess -= r;
+        }
+      }
+    }
+
+    // 3) Last resort: shrink the last non-interactive cell with colspan > 1
+    if (excess > 0) {
+      var cells = Array.from(tr.cells).reverse();
+      var target = cells.find(function (td) {
+        if ((td.colSpan || 1) <= 1) return false;
+        // Avoid cells that contain form controls (inputs/select/textarea/button)
+        return td.querySelector('input,select,textarea,button') == null;
+      });
+      if (target) {
+        var r2 = Math.min(excess, (target.colSpan || 1) - 1);
+        target.colSpan = target.colSpan - r2;
+        excess -= r2;
+      }
+    }
+
+    // Note: we DO NOT remove any cells; we only reduce span.
+    if (excess > 0 && DEBUG) {
+      log('Row still wide by', excess, '(no safe shrink target found):', tr);
+    } else {
+      log('Shrank row to', expected, tr);
+    }
+  }
+
+  function findZeroCell(tr) {
+    for (var i = tr.cells.length - 1; i >= 0; i--) {
+      var td = tr.cells[i];
+      if (td.classList && td.classList.contains('zero-cell')) return td;
+    }
+    return null;
+  }
+
+  function normalizeTables(root) {
+    root.querySelectorAll('table.section').forEach(function (table) {
+      var expected = getExpectedCols(table);
+      table.querySelectorAll(':scope > tr, :scope > thead > tr, :scope > tbody > tr, :scope > tfoot > tr')
+        .forEach(function (tr) { ensureWidth(tr, expected); });
+    });
+  }
+
+  function run() { try { normalizeTables(document); } catch (e) { console.error(e); } }
+
+  // Initial run
+  onReady(run);
+
+  // Re-run after partial postbacks (Power Pages / ASP.NET WebForms)
+  try {
+    if (window.Sys && Sys.WebForms && Sys.WebForms.PageRequestManager) {
+      Sys.WebForms.PageRequestManager.getInstance().add_endRequest(run);
+      log('Hooked PageRequestManager.endRequest');
+    }
+  } catch (e) { /* ignore */ }
+
+  // Optional: expose a manual trigger for QA
+  window.ppNormalizeTables = run;
+})();
+
