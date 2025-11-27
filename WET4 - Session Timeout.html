@@ -42,26 +42,42 @@
 }'></span>
 {%- endif -%}
 <script>
-  // Don’t rewrite on the timeout page itself
-  if (!/\/session-?timeout\/?$/i.test(location.pathname)) {
-    var el = document.querySelector('.wb-sessto');
-    if (el) {
-      try {
-        var cfg = JSON.parse(el.getAttribute('data-wb-sessto') || '{}');
-        var here = location.pathname + location.search + location.hash;
-        cfg.logouturl = '/session-timeout?returnUrl=' + encodeURIComponent(here);
-        el.setAttribute('data-wb-sessto', JSON.stringify(cfg));
-      } catch (e) {
-        console.warn('sessto config parse failed:', e);
-      }
+  (function () {
+    if (/\/session-?timeout\/?$/i.test(location.pathname)) {
+      return;
     }
-  }
+
+    var sesstoEl = document.querySelector(".wb-sessto");
+    if (!sesstoEl) {
+      return;
+    }
+
+    var cfg;
+    try {
+      cfg = JSON.parse(sesstoEl.getAttribute("data-wb-sessto") || "{}");
+    } catch (err) {
+      return;
+    }
+
+    var currentUrl = location.pathname + location.search + location.hash;
+    cfg.logouturl = "/session-timeout?returnUrl=" + encodeURIComponent(currentUrl);
+    sesstoEl.setAttribute("data-wb-sessto", JSON.stringify(cfg));
+  })();
 </script>
 <script>
-  (window.jQuery || window.$wet)(document).one("wb-ready.wb", function () {
-    (window.jQuery || window.$wet)(".wb-sessto").trigger("wb-init.wb-sessto");
-  });
-  (window.jQuery || window.$wet)(document).on("wb-ready.wb-sessto", () => console.log("[sessto] ready"));
-  (window.jQuery || window.$wet)(document).on("timeout.wb-sessto", () => console.log("[sessto] timeout"));
+  (function (jq) {
+    if (!jq) {
+      return;
+    }
+
+    var $sessto = jq(".wb-sessto");
+    if (!$sessto.length) {
+      return;
+    }
+
+    jq(document).one("wb-ready.wb", function () {
+      $sessto.trigger("wb-init.wb-sessto");
+    });
+  })(window.jQuery || window.$wet);
 </script>
 {%- endif -%}
