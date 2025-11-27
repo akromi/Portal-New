@@ -94,11 +94,21 @@ function globalEvaluationFunction() {
   // Re-entrancy guard: prevent tight loops when renderer indirectly retriggers validation
   if (globalEvaluationFunction._busy) return true;
   globalEvaluationFunction._busy = true;
-  
+
   // Clear guard on next tick (after synchronous execution completes)
   setTimeout(function() {
     globalEvaluationFunction._busy = false;
   }, 0);
+
+  // Remove the platform headertext that injects a hidden announcement so we can
+  // control a single live region + heading for screen readers.
+  if (!globalEvaluationFunction._clearedHeadertext) {
+    var summaryEl = document.getElementById('ValidationSummaryEntityFormView');
+    if (summaryEl && typeof summaryEl.headertext !== 'undefined') {
+      try { summaryEl.headertext = ''; } catch (e) { /* ignore */ }
+    }
+    globalEvaluationFunction._clearedHeadertext = true;
+  }
 
   // 1) Clear older inline messages
   for (var i = 0; i < Page_Validators.length; i++) {
@@ -158,9 +168,38 @@ function globalEvaluationFunction() {
   }
 
 // 4) Rebuild the summary list to exactly match the de-duped items
+  var $sum = $('#ValidationSummaryEntityFormView');
+  var headingText = '';
+
+  // Helper: ensure a single, consistent live region and clear any stale hidden text
+  var $live = $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').first();
+  function syncLiveRegion(text) {
+    if (!$live.length) {
+      $live = $('<p class="wb-inv" aria-live="polite" role="alert"></p>').prependTo($sum);
+    }
+    if (!$live.attr('aria-live')) $live.attr('aria-live', 'polite');
+    if (!$live.attr('role')) $live.attr('role', 'alert');
+
+    // Remove stale hidden text siblings so only one announcement source remains
+    $sum.children('.wb-inv, .sr-only, .visually-hidden, .sr-only-inline').not($live).remove();
+
+    $live.text(text);
+  }
+
+  if (items.length > 0) {
+    var n = items.length;
+    headingText = (currentLang === 'en'
+      ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+      : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+        (n > 1 ? "s ont été trouvées." : " a été trouvée."));
+    // Update the live region immediately so screen readers hear the same text as the heading
+    syncLiveRegion(headingText);
+  } else {
+    syncLiveRegion('');
+  }
+
   setTimeout(function () {
     var focused = $(':focus');
-    var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
     // A11y: ensure the UL keeps its native list semantics
@@ -170,8 +209,9 @@ function globalEvaluationFunction() {
     $ul.empty();
 
     if (items.length === 0) {
-      // No errors → hide the summary and clear heading
+      // No errors → hide the summary and clear heading/accessibility text
       $sum.find('> h2').text('');
+      syncLiveRegion('');
       $sum.hide();
       try { focused.focus(); } catch (e) { }
       return;
@@ -187,13 +227,10 @@ function globalEvaluationFunction() {
       $ul.append($('<li/>').append($a));
     });
 
-    var n = items.length;
-    $sum.find('> h2').text(
-      currentLang === 'en'
-        ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-        : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
-          (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-    );
+    // Keep the visible heading and screen-reader-only text in sync so AT users
+    // hear the same message when the summary first appears and when they revisit it.
+    $sum.find('> h2').text(headingText);
+    syncLiveRegion(headingText);
 
     $sum.find('a').css('text-decoration', 'underline');
     $sum.show();

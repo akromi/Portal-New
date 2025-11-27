@@ -265,7 +265,7 @@ body.read-only-summary .crmEntityFormView .table-info .validators {
 #ValidationSummaryEntityFormView ul li a:focus-visible {
   color: #0535d2;                    /* GCWeb hover/focus blue */
   text-decoration: underline;
-  outline: 2px solid var(--pp-focus-border);
+  outline: 3px solid #fcba19;        /* match GCWeb/WET link focus ring */
   outline-offset: 2px;
   background-color: transparent;
 }
