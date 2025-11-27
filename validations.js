@@ -215,6 +215,7 @@ function globalEvaluationFunction() {
       syncLiveRegion('');
       $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').text('');
       $sum.hide();
+      $sum.removeAttr('tabindex');
       try { focused.focus(); } catch (e) { }
       return;
     }
@@ -252,42 +253,36 @@ function globalEvaluationFunction() {
 
     $sum.find('a').css('text-decoration', 'underline');
     $sum.show();
-    if (!$sum.attr('tabindex')) $sum.attr('tabindex', '-1'); // a11y guard
+    $sum.removeAttr('tabindex');
 
-    // NEW: when a submit just failed, do NOT move focus into the summary.
-    // Instead, scroll it into view and blur the current element so that the
-    // *next* Tab goes to the first focusable element (Skip to main content).
+    // NEW: when a submit just failed, move focus directly to the first error link
+    // instead of focusing the summary container itself.
     var suppress = (window.__suppressSummaryFocusUntil && Date.now() < window.__suppressSummaryFocusUntil);
     var wantFocus = (window.__validators_focusSummaryNow === true) && !suppress && $sum.is(':visible');
     if (wantFocus) {
-       // Scroll the *page* to the very top so that the first Tab
-      // will encounter the "Skip to main content" link.
-      try {
-        if (typeof window.scrollTo === 'function') {
-          window.scrollTo(0, 0);  // top-left
-        } else {
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+      var firstLink = $sum.find('a').first();
+      var focused = false;
+
+      if (firstLink.length) {
+        try {
+          firstLink[0].focus({ preventScroll: false });
+          focused = (document.activeElement === firstLink[0]);
+        } catch (e) { /* ignore */ }
+
+        if (!focused) {
+          try {
+            firstLink[0].focus();
+            focused = (document.activeElement === firstLink[0]);
+          } catch (e) { /* ignore */ }
         }
-      } catch (e) {
-        // ignore scroll errors
+
+        if (focused && typeof firstLink[0].scrollIntoView === 'function') {
+          try { firstLink[0].scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) { /* ignore */ }
+        }
       }
 
-      // Blur the current element so the next Tab starts from the top of the page
-      setTimeout(function () {
-        try {
-          var active = document.activeElement;
-          if (active &&
-              active !== document.body &&
-              active !== document.documentElement &&
-              typeof active.blur === 'function') {
-            active.blur();
-          }
-        } catch (e) {
-          // ignore focus errors
-        }
-      }, 0);
-      window.__validators_focusSummaryNow = false; // consume one-shot flag
+      // consume one-shot flag regardless of focus result
+      window.__validators_focusSummaryNow = false;
     }
 
   }, 250);
@@ -1136,9 +1131,8 @@ function addValidators(fields) {
     window.__validators_focusSummaryNow = true;
     ensureLiveChangeHandlers();
   });
-  // Keep validation summary keyboard reachable (unchanged behaviour)
   var $summary = $('#ValidationSummaryEntityFormView');
-  if (!$summary.attr('tabindex')) $summary.attr('tabindex', '-1'); // 
+  $summary.removeAttr('tabindex');
 
   // A11y: ensure any UL in the summary is not role="presentation"
   $summary.find('ul[role="presentation"]').removeAttr('role');
