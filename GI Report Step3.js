@@ -1,14 +1,11 @@
 // Step 3
-const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-gi-step3-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
+const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-gi-report-confirmation']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
 // Set immediately to avoid default heading flash
-if (document.title !== GI_STEP3_PAGE_TITLE) {
-  document.title = GI_STEP3_PAGE_TITLE;
-}
+document.title = GI_STEP3_PAGE_TITLE;
 
 window.addEventListener('load', () => {
+ debugger;
   // Keep the heading in sync after load completes
-  
-  const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-gi-step3-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
   document.title = GI_STEP3_PAGE_TITLE;
 
   const has$ = typeof window.jQuery === "function";
@@ -18,6 +15,7 @@ window.addEventListener('load', () => {
   function qs(sel, root) { return (root || document).querySelector(sel); }
   function qsa(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
   function setText(el, text) { if (el) el.textContent = text; }
+
   try {
     // --- step id ------------------------------------------------------------
     const params = new URLSearchParams(window.location.search);
