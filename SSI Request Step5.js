@@ -1,6 +1,9 @@
-// SSI Step 5 
+// SSI Step 5
+const SSI_STEP5_PAGE_TITLE = "{{snippets['ethi-ssi-step5']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP5_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
-    document.title =   "{{snippets['ethi-ssi-step5']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+    document.title = SSI_STEP5_PAGE_TITLE;
     $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step5']}}"+"</h2>");
     $("input:not([type='radio'],[type='button'],[id='wb-srch-q'])").css({"width": "500px"}).removeAttr('maxlength');
     $('textarea').css('width', '500px');
@@ -11,6 +14,14 @@ window.addEventListener("load", (e) => {
     $("#ethi_submittimeutc").hide();
     $("#ethi_submittimeutc").val(formatDateToYYYYMMDD12Hour(new Date()));
     $("#wb-lng").attr("class","text-right");
+
+    // Read-only summary: strip required class to prevent visual asterisks
+    $('body').addClass('read-only-summary');
+    $('.crmEntityFormView .table-info.required').removeClass('required');
+    // Also hide any lingering validator star containers
+    $('.crmEntityFormView .validators').hide();
+    // Prevent SR from announcing 'required' on read-only summary fields
+    $('.crmEntityFormView [aria-required="true"]').removeAttr('aria-required');
     //$("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
     $('#wb-sm').remove();
     $("div[class='app-bar-mb container visible-xs-block hidden-print']").remove();
@@ -34,9 +45,13 @@ window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or 
     $("#ethi_existingssc_delete_button").hide();
 
     var lang = "{{ website.selected_language.code }}";
+    // Final step: show “Submit” on the action button
+    const submitLabel = /^fr/i.test(lang) ? 'Soumettre' : 'Submit';
+    $('#NextButton').val(submitLabel);
+    $('#captcha').text(submitLabel);
 
     if($("#ethi_invoicecountry").val() =="f23dc860-6f39-ef11-a317-000d3af44283")
-        { 
+        {
             $("div #ethi_invoiceprovincestate_label").parent().parent().css("display","none");
             $("div #ethi_invoicepostalcodezipcode_label").parent().parent().css("display","none");
             $("div #ethi_invoiceprovince_label").parent().parent().css("display","block");
@@ -66,6 +81,7 @@ window.WETFocus?.install({ selector: 'h2.tab-title', mode: 'announce' }); // or 
   else { $("#ethi_otherregistryflag").parent().parent().hide() };
 
 // Make the “ethi_canadiancoastguard” radios tabbable but read-only
+$('#ethi_submitterismedicalcontact').addClass('wet-patched-radio');
 ReadOnlyRadioGroup.make('#ethi_submitterismedicalcontact');
 ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial postbacks
 
@@ -75,12 +91,13 @@ ReadOnlyRadioGroup.reapply('#ethi_submitterismedicalcontact'); // for partial po
     };
 
 // Make the “Canadian coast guard” radios tabbable but read-only
-ReadOnlyRadioGroup.make({ 
-  container: '#ethi_canadiancoastguard', 
+$('#ethi_canadiancoastguard').addClass('wet-patched-radio');
+ReadOnlyRadioGroup.make({
+  container: '#ethi_canadiancoastguard',
   label: '#ethi_canadiancoastguard_label' // optional; helper can infer it
 });
-ReadOnlyRadioGroup.reapply({ 
-  container: '#ethi_canadiancoastguard', 
+ReadOnlyRadioGroup.reapply({
+  container: '#ethi_canadiancoastguard',
   label: '#ethi_canadiancoastguard_label'
 });
 BindRadioGroupLabel.make({
@@ -93,7 +110,6 @@ BindRadioGroupLabel.make({
 
 // Format date to 'yyyy-mm-dd hh:mm AM/PM'
 const formatDateToYYYYMMDD12Hour = (date) => {
-    debugger;
     const year = date.getUTCFullYear(); // Get UTC year
     const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Get UTC month (0-based)
     const day = String(date.getUTCDate()).padStart(2, '0'); // Get UTC day

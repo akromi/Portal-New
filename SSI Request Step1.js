@@ -1,7 +1,10 @@
 // SSI Step 1 Ship Agency
+const SSI_STEP1_PAGE_TITLE = "{{snippets['ethi-ssi-step1']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP1_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
     debugger;
-    document.title =   "{{snippets['ethi-ssi-step1']}}"  + " - " +  "{{snippets['ethi-ssi-request-title']}}";
+    document.title = SSI_STEP1_PAGE_TITLE;
     const styleString = "width:100% ;font-size: 16px; line-height:35px; padding: 0 12px;";
     $(".form-control").attr('style', styleString);
     $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step1']}}"+"</h2>");

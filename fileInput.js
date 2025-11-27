@@ -85,8 +85,8 @@ function sanitizeFileButtons() {
    ============================================================ */
 
 (function () {
-  const LOG  = (...a)=>console.log('[file-clean]', ...a);
-  const DBG  = (...a)=>console.log('%c[file-clean:dbg]','color:#888', ...a);
+  const LOG  = () => {};
+  const DBG  = () => {};
 
   // Disable/hide built-in Required validator for a given base id
   function disableRequiredHidden(baseId){
@@ -399,16 +399,20 @@ if ($textDiv.length) {
 
     $input.off('change.relabel').on('change.relabel', function () {
   // Let PP's inline fileLoad(...) finish first, then take over the UI.
-  setTimeout(() => {
-    const h0 = performance.now();
-    const TT = _i18n();
-    const fin = this;
-    const file = fin.files && fin.files[0];
+    setTimeout(() => {
+      const h0 = performance.now();
+      const TT = _i18n();
+      const fin = this;
+      const file = fin.files && fin.files[0];
+      const baseId = String($input.attr('id') || '').replace(/_input_file$/, '');
+      const $hiddenName = $('#' + baseId + '_hidden_filename, #' + baseId + 'hidden_filename');
+      const $hiddenType = $('#' + baseId + '_hidden_filetype, #' + baseId + 'hidden_filetype');
+      const $hiddenSize = $('#' + baseId + '_hidden_file_size, #' + baseId + 'hidden_file_size');
 
-    if (file) {
-      // 1) Update visible filename
-      if ($hiddenSpan.length) $hiddenSpan.text(file.name);
-      if ($textDiv.text().trim() !== file.name) $textDiv.text(file.name);
+      if (file) {
+        // 1) Update visible filename
+        if ($hiddenSpan.length) $hiddenSpan.text(file.name);
+        if ($textDiv.text().trim() !== file.name) $textDiv.text(file.name);
 
       // 2) Button labels/ARIA
       if ($chooseBtn.text().trim() !== TT.change) $chooseBtn.text(TT.change);
@@ -420,19 +424,27 @@ if ($textDiv.length) {
         if ($delBtn.attr('aria-label') !== TT.delete) $delBtn.attr('aria-label', TT.delete);
       }
 
-      // 4) Clear any server-file hint so we don’t revert to old name later
-      $block.removeAttr('data-has-server-file');
-      if ($block.removeData) $block.removeData('has-server-file');
+        // 4) Clear any server-file hint so we don’t revert to old name later
+        $block.removeAttr('data-has-server-file');
+        if ($block.removeData) $block.removeData('has-server-file');
 
-    } else {
-      // Cleared
-      if ($hiddenSpan.length) $hiddenSpan.text('');
-      if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
-      if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
-      if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
-      if ($delBtn.length) $delBtn.hide();
-      logger.info('block[%d]: cleared selection -> reset to NONE', idx);
-    }
+        // 5) Sync PP hidden partners so built-in validators clear
+        if ($hiddenName.length) $hiddenName.val(file.name);
+        if ($hiddenType.length) $hiddenType.val(file.type || '');
+        if ($hiddenSize.length) $hiddenSize.val(String(file.size || ''));
+
+      } else {
+        // Cleared
+        if ($hiddenSpan.length) $hiddenSpan.text('');
+        if ($textDiv.text().trim() !== TT.none) $textDiv.text(TT.none);
+        if ($chooseBtn.text().trim() !== TT.choose) $chooseBtn.text(TT.choose);
+        if ($chooseBtn.attr('aria-label') !== TT.choose) $chooseBtn.attr('aria-label', TT.choose);
+        if ($delBtn.length) $delBtn.hide();
+        if ($hiddenName.length) $hiddenName.val('');
+        if ($hiddenType.length) $hiddenType.val('');
+        if ($hiddenSize.length) $hiddenSize.val('');
+        logger.info('block[%d]: cleared selection -> reset to NONE', idx);
+      }
 
     logger.trace('block[%d]: onChange duration=%dms', idx, Math.round(performance.now() - h0));
   }, 0);
