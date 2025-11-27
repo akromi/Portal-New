@@ -234,40 +234,40 @@ body.read-only-summary .crmEntityFormView .table-info .validators {
 /* ==================== ACCESSIBLE FOCUS VISUALS ==================== */
 /* 1) Validation summary (WET/GCWeb-style links & focus) */
 
-/* Summary container – WET/GCWeb base link colour and scroll offset.
-   It should NOT show a focus frame – focus remains on page content. */
+/* Summary container – keep native GCWeb/WET link states and align scroll position */
 #ValidationSummaryEntityFormView {
-  color: #284162;              /* GCWeb standard link colour */
   scroll-margin-top: 90px;
 }
 
-#ValidationSummaryEntityFormView:focus {
+/* Match GCWeb/WET link behaviour: hover = colour change only; focus = colour + ring */
+#ValidationSummaryEntityFormView a,
+#ValidationSummaryEntityFormView a:visited,
+.validation-summary-errors a,
+.validation-summary-errors a:visited,
+.wb-frmvld-list a,
+.wb-frmvld-list a:visited {
+  color: var(--bs-link-color, #295376) !important;
+  text-decoration: underline;
+}
+
+#ValidationSummaryEntityFormView a:hover,
+.validation-summary-errors a:hover,
+.wb-frmvld-list a:hover,
+#ValidationSummaryEntityFormView a:active,
+.validation-summary-errors a:active,
+.wb-frmvld-list a:active {
+  color: var(--bs-link-hover-color, #0535d2) !important;
   outline: none;
   box-shadow: none;
 }
 
-/* Error links inside the summary */
-#ValidationSummaryEntityFormView ul li a {
-  color: inherit;              /* inherit #284162 from the container */
-  text-decoration: underline;
-}
-
-/* Visited state – GCWeb purple */
-#ValidationSummaryEntityFormView ul li a:visited {
-  color: #7834bc;
-}
-
-/* Hover + focus – match WET example:
-   - blue text on hover/focus
-   - visible focus outline using the same theme focus colour as other links. */
-#ValidationSummaryEntityFormView ul li a:hover,
-#ValidationSummaryEntityFormView ul li a:focus,
-#ValidationSummaryEntityFormView ul li a:focus-visible {
-  color: #0535d2;                    /* GCWeb hover/focus blue */
-  text-decoration: underline;
-  outline: 2px solid var(--pp-focus-border);
+#ValidationSummaryEntityFormView a:focus-visible,
+.validation-summary-errors a:focus-visible,
+.wb-frmvld-list a:focus-visible {
+  color: var(--bs-link-hover-color, #0535d2) !important;
+  outline: 3px solid var(--pp-focus-border);
   outline-offset: 2px;
-  background-color: transparent;
+  box-shadow: none;
 }
 
 

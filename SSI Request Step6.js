@@ -1,8 +1,10 @@
 //Step6 Confirmation
 //$(function() {
+const SSI_STEP6_PAGE_TITLE = "{{snippets['ethi-ssi-request-confirmation']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP6_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
-    debugger;
-    document.title = "{{snippets['ethi-ssi-request-confirmation']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+    document.title = SSI_STEP6_PAGE_TITLE;
     //$("#wb-lng").attr("class","text-right");
    // $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");
     $('#wb-sm').remove();
@@ -27,8 +29,10 @@ window.addEventListener("load", (e) => {
     $("div.top").css('align-items', 'center').html("<h2>Confirmation</h2>");  
     
     $("#PreviousButton").removeAttr("onclick").val("{{snippets['ethi-print']}}");
-    const request = "{{snippets['ethi-ssi-request']}}";
-    $("#NextButton").val(request);
+    const lang = "{{ website.selected_language.code }}";
+    const anotherRequestLabel = /^fr/i.test(lang) ? 'Demander un autre SSI' : 'Request another SSI';
+    $("#NextButton").val(anotherRequestLabel);
+    $("#captcha").text(anotherRequestLabel);
 
     $('#PreviousButton').off('click') 
     .on('click', function (e) {

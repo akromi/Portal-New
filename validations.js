@@ -94,11 +94,21 @@ function globalEvaluationFunction() {
   // Re-entrancy guard: prevent tight loops when renderer indirectly retriggers validation
   if (globalEvaluationFunction._busy) return true;
   globalEvaluationFunction._busy = true;
-  
+
   // Clear guard on next tick (after synchronous execution completes)
   setTimeout(function() {
     globalEvaluationFunction._busy = false;
   }, 0);
+
+  // Remove the platform headertext that injects a hidden announcement so we can
+  // control a single live region + heading for screen readers.
+  if (!globalEvaluationFunction._clearedHeadertext) {
+    var summaryEl = document.getElementById('ValidationSummaryEntityFormView');
+    if (summaryEl && typeof summaryEl.headertext !== 'undefined') {
+      try { summaryEl.headertext = ''; } catch (e) { /* ignore */ }
+    }
+    globalEvaluationFunction._clearedHeadertext = true;
+  }
 
   // 1) Clear older inline messages
   for (var i = 0; i < Page_Validators.length; i++) {
@@ -158,9 +168,38 @@ function globalEvaluationFunction() {
   }
 
 // 4) Rebuild the summary list to exactly match the de-duped items
+  var $sum = $('#ValidationSummaryEntityFormView');
+  var headingText = '';
+
+  // Helper: ensure a single, consistent live region and clear any stale hidden text
+  var $live = $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').first();
+  function syncLiveRegion(text) {
+    if (!$live.length) {
+      $live = $('<p class="wb-inv" aria-live="polite" role="alert"></p>').prependTo($sum);
+    }
+    if (!$live.attr('aria-live')) $live.attr('aria-live', 'polite');
+    if (!$live.attr('role')) $live.attr('role', 'alert');
+
+    // Remove stale hidden text siblings so only one announcement source remains
+    $sum.children('.wb-inv, .sr-only, .visually-hidden, .sr-only-inline').not($live).remove();
+
+    $live.text(text);
+  }
+
+  if (items.length > 0) {
+    var n = items.length;
+    headingText = (currentLang === 'en'
+      ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+      : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+        (n > 1 ? "s ont été trouvées." : " a été trouvée."));
+    // Update the live region immediately so screen readers hear the same text as the heading
+    syncLiveRegion(headingText);
+  } else {
+    syncLiveRegion('');
+  }
+
   setTimeout(function () {
     var focused = $(':focus');
-    var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
     // A11y: ensure the UL keeps its native list semantics
@@ -170,9 +209,11 @@ function globalEvaluationFunction() {
     $ul.empty();
 
     if (items.length === 0) {
-      // No errors → hide the summary and clear heading
+      // No errors → hide the summary and clear heading/accessibility text
       $sum.find('> h2').text('');
+      syncLiveRegion('');
       $sum.hide();
+      $sum.removeAttr('tabindex');
       try { focused.focus(); } catch (e) { }
       return;
     }
@@ -187,52 +228,43 @@ function globalEvaluationFunction() {
       $ul.append($('<li/>').append($a));
     });
 
-    var n = items.length;
-    $sum.find('> h2').text(
-      currentLang === 'en'
-        ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-        : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
-          (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-    );
+    // Keep the visible heading and screen-reader-only text in sync so AT users
+    // hear the same message when the summary first appears and when they revisit it.
+    $sum.find('> h2').text(headingText);
+    syncLiveRegion(headingText);
 
     $sum.find('a').css('text-decoration', 'underline');
     $sum.show();
-    if (!$sum.attr('tabindex')) $sum.attr('tabindex', '-1'); // a11y guard
+    $sum.removeAttr('tabindex');
 
-    // NEW: when a submit just failed, do NOT move focus into the summary.
-    // Instead, scroll it into view and blur the current element so that the
-    // *next* Tab goes to the first focusable element (Skip to main content).
+    // NEW: when a submit just failed, move focus directly to the first error link
+    // instead of focusing the summary container itself.
     var suppress = (window.__suppressSummaryFocusUntil && Date.now() < window.__suppressSummaryFocusUntil);
     var wantFocus = (window.__validators_focusSummaryNow === true) && !suppress && $sum.is(':visible');
     if (wantFocus) {
-       // Scroll the *page* to the very top so that the first Tab
-      // will encounter the "Skip to main content" link.
-      try {
-        if (typeof window.scrollTo === 'function') {
-          window.scrollTo(0, 0);  // top-left
-        } else {
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+      var firstLink = $sum.find('a').first();
+      var focused = false;
+
+      if (firstLink.length) {
+        try {
+          firstLink[0].focus({ preventScroll: false });
+          focused = (document.activeElement === firstLink[0]);
+        } catch (e) { /* ignore */ }
+
+        if (!focused) {
+          try {
+            firstLink[0].focus();
+            focused = (document.activeElement === firstLink[0]);
+          } catch (e) { /* ignore */ }
         }
-      } catch (e) {
-        // ignore scroll errors
+
+        if (focused && typeof firstLink[0].scrollIntoView === 'function') {
+          try { firstLink[0].scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) { /* ignore */ }
+        }
       }
 
-      // Blur the current element so the next Tab starts from the top of the page
-      setTimeout(function () {
-        try {
-          var active = document.activeElement;
-          if (active &&
-              active !== document.body &&
-              active !== document.documentElement &&
-              typeof active.blur === 'function') {
-            active.blur();
-          }
-        } catch (e) {
-          // ignore focus errors
-        }
-      }, 0);
-      window.__validators_focusSummaryNow = false; // consume one-shot flag
+      // consume one-shot flag regardless of focus result
+      window.__validators_focusSummaryNow = false;
     }
 
   }, 250);
@@ -1081,9 +1113,8 @@ function addValidators(fields) {
     window.__validators_focusSummaryNow = true;
     ensureLiveChangeHandlers();
   });
-  // Keep validation summary keyboard reachable (unchanged behaviour)
   var $summary = $('#ValidationSummaryEntityFormView');
-  if (!$summary.attr('tabindex')) $summary.attr('tabindex', '-1'); // 
+  $summary.removeAttr('tabindex');
 
   // A11y: ensure any UL in the summary is not role="presentation"
   $summary.find('ul[role="presentation"]').removeAttr('role');
