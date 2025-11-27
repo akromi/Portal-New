@@ -1,6 +1,5 @@
 // Step 3
-const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-confirmation']}}" + " - " + "{{snippets['ethi-gi-step3-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
-const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-gi-step3-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
+const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-confirmation']}}" + " - "  + "{{snippets['ethi-gi-report-title']}}";
 // Set immediately to avoid default heading flash
 if (document.title !== GI_STEP3_PAGE_TITLE) {
   document.title = GI_STEP3_PAGE_TITLE;
