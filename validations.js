@@ -94,11 +94,21 @@ function globalEvaluationFunction() {
   // Re-entrancy guard: prevent tight loops when renderer indirectly retriggers validation
   if (globalEvaluationFunction._busy) return true;
   globalEvaluationFunction._busy = true;
-  
+
   // Clear guard on next tick (after synchronous execution completes)
   setTimeout(function() {
     globalEvaluationFunction._busy = false;
   }, 0);
+
+  // Remove the platform headertext that injects a hidden announcement so we can
+  // control a single live region + heading for screen readers.
+  if (!globalEvaluationFunction._clearedHeadertext) {
+    var summaryEl = document.getElementById('ValidationSummaryEntityFormView');
+    if (summaryEl && typeof summaryEl.headertext !== 'undefined') {
+      try { summaryEl.headertext = ''; } catch (e) { /* ignore */ }
+    }
+    globalEvaluationFunction._clearedHeadertext = true;
+  }
 
   // 1) Clear older inline messages
   for (var i = 0; i < Page_Validators.length; i++) {
@@ -158,9 +168,38 @@ function globalEvaluationFunction() {
   }
 
 // 4) Rebuild the summary list to exactly match the de-duped items
+  var $sum = $('#ValidationSummaryEntityFormView');
+  var headingText = '';
+
+  // Helper: ensure a single, consistent live region and clear any stale hidden text
+  var $live = $sum.find('> .wb-inv, > .sr-only, > .visually-hidden, > .sr-only-inline').first();
+  function syncLiveRegion(text) {
+    if (!$live.length) {
+      $live = $('<p class="wb-inv" aria-live="polite" role="alert"></p>').prependTo($sum);
+    }
+    if (!$live.attr('aria-live')) $live.attr('aria-live', 'polite');
+    if (!$live.attr('role')) $live.attr('role', 'alert');
+
+    // Remove stale hidden text siblings so only one announcement source remains
+    $sum.children('.wb-inv, .sr-only, .visually-hidden, .sr-only-inline').not($live).remove();
+
+    $live.text(text);
+  }
+
+  if (items.length > 0) {
+    var n = items.length;
+    headingText = (currentLang === 'en'
+      ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
+      : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
+        (n > 1 ? "s ont été trouvées." : " a été trouvée."));
+    // Update the live region immediately so screen readers hear the same text as the heading
+    syncLiveRegion(headingText);
+  } else {
+    syncLiveRegion('');
+  }
+
   setTimeout(function () {
     var focused = $(':focus');
-    var $sum = $('#ValidationSummaryEntityFormView');
     var $ul = $sum.find('> ul');
 
     // A11y: ensure the UL keeps its native list semantics
@@ -170,9 +209,11 @@ function globalEvaluationFunction() {
     $ul.empty();
 
     if (items.length === 0) {
-      // No errors → hide the summary and clear heading
+      // No errors → hide the summary and clear heading/accessibility text
       $sum.find('> h2').text('');
+      syncLiveRegion('');
       $sum.hide();
+      $sum.removeAttr('tabindex');
       try { focused.focus(); } catch (e) { }
       return;
     }
@@ -187,52 +228,43 @@ function globalEvaluationFunction() {
       $ul.append($('<li/>').append($a));
     });
 
-    var n = items.length;
-    $sum.find('> h2').text(
-      currentLang === 'en'
-        ? 'The form could not be submitted because ' + n + ' error' + (n > 1 ? 's were found' : ' was found')
-        : "Le formulaire n'a pu être soumis car " + n + ' erreur' +
-          (n > 1 ? "s ont été trouvées." : " a été trouvée.")
-    );
+    // Keep the visible heading and screen-reader-only text in sync so AT users
+    // hear the same message when the summary first appears and when they revisit it.
+    $sum.find('> h2').text(headingText);
+    syncLiveRegion(headingText);
 
     $sum.find('a').css('text-decoration', 'underline');
     $sum.show();
-    if (!$sum.attr('tabindex')) $sum.attr('tabindex', '-1'); // a11y guard
+    $sum.removeAttr('tabindex');
 
-    // NEW: when a submit just failed, do NOT move focus into the summary.
-    // Instead, scroll it into view and blur the current element so that the
-    // *next* Tab goes to the first focusable element (Skip to main content).
+    // NEW: when a submit just failed, move focus directly to the first error link
+    // instead of focusing the summary container itself.
     var suppress = (window.__suppressSummaryFocusUntil && Date.now() < window.__suppressSummaryFocusUntil);
     var wantFocus = (window.__validators_focusSummaryNow === true) && !suppress && $sum.is(':visible');
     if (wantFocus) {
-       // Scroll the *page* to the very top so that the first Tab
-      // will encounter the "Skip to main content" link.
-      try {
-        if (typeof window.scrollTo === 'function') {
-          window.scrollTo(0, 0);  // top-left
-        } else {
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+      var firstLink = $sum.find('a').first();
+      var focused = false;
+
+      if (firstLink.length) {
+        try {
+          firstLink[0].focus({ preventScroll: false });
+          focused = (document.activeElement === firstLink[0]);
+        } catch (e) { /* ignore */ }
+
+        if (!focused) {
+          try {
+            firstLink[0].focus();
+            focused = (document.activeElement === firstLink[0]);
+          } catch (e) { /* ignore */ }
         }
-      } catch (e) {
-        // ignore scroll errors
+
+        if (focused && typeof firstLink[0].scrollIntoView === 'function') {
+          try { firstLink[0].scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) { /* ignore */ }
+        }
       }
 
-      // Blur the current element so the next Tab starts from the top of the page
-      setTimeout(function () {
-        try {
-          var active = document.activeElement;
-          if (active &&
-              active !== document.body &&
-              active !== document.documentElement &&
-              typeof active.blur === 'function') {
-            active.blur();
-          }
-        } catch (e) {
-          // ignore focus errors
-        }
-      }, 0);
-      window.__validators_focusSummaryNow = false; // consume one-shot flag
+      // consume one-shot flag regardless of focus result
+      window.__validators_focusSummaryNow = false;
     }
 
   }, 250);
@@ -276,7 +308,6 @@ function createGlobalValidator() {
 // Updates the label's error messages as per WET accessibility requirements
 // PRIVATE
 function updateLabelErrorMessage(id, type, message) {
-  console.log('[WET-PP] updateLabelErrorMessage → SET error', { id, type, message });
   const $field = getFocusableField(id, type);
   const $label = $('#' + id + '_label');
 
@@ -319,7 +350,6 @@ function updateLabelErrorMessage(id, type, message) {
 // // Clears inline error + red frame for a single field
 // // PRIVATE
 function clearFieldErrorUI(id, type) {
-  console.log('[WET-PP] clearFieldErrorUI → CLEAR error', { id, type });
 
   var $field = getFocusableField(id, type);
   if ($field.length) {
@@ -604,25 +634,10 @@ function updatesOnChange(o, evt) {
   updatesOnChange._busy[id] = true;
 
   try {
-    // -------- DEBUG: entry --------
-    try {
-      console.log('[WET-PP] updatesOnChange:start', {
-        id: id,
-        type: type,
-        evtType: evt && evt.type,
-        evtIsTrusted: evt && evt.isTrusted,
-        value: (o && (typeof o.value !== 'undefined' ? o.value : o.textContent)),
-        active: window.__validators_active,
-        Page_IsValid: (typeof window.Page_IsValid !== 'undefined' ? window.Page_IsValid : undefined)
-      });
-    } catch (e) { /* ignore debug errors */ }
-
     if (typeof removeDuplicateInlineErrors === 'function') {
       try {
         removeDuplicateInlineErrors(id);
-      } catch (e) {
-        console.log('[WET-PP] updatesOnChange: removeDuplicateInlineErrors error', { id: id }, e && e.message);
-      }
+      } catch (e) { }
     }
 
     // IMPORTANT: declare matching at function scope so it's always defined
@@ -630,18 +645,8 @@ function updatesOnChange(o, evt) {
 
     // Defensive: no validators? nothing to do
     var pv = window.Page_Validators || [];
-    try {
-      console.log('[WET-PP] updatesOnChange: Page_Validators check', {
-        id: id,
-        hasArray: Array.isArray(pv),
-        count: Array.isArray(pv) ? pv.length : undefined
-      });
-    } catch (e) { /* ignore debug */ }
 
     if (!Array.isArray(pv) || pv.length === 0) {
-      try {
-        console.log('[WET-PP] updatesOnChange: no Page_Validators, abort', { id: id });
-      } catch (e) { }
       return;
     }
 
@@ -675,46 +680,15 @@ function updatesOnChange(o, evt) {
     }
 
     if (matching.length === 0) {
-      try {
-        console.log('[WET-PP] updatesOnChange: no matching validators for field', { id: id, type: type });
-      } catch (e) { }
       return;
     }
 
-    // DEBUG: list matching validators for this field
-    try {
-      console.log('[WET-PP] updatesOnChange: matching validators', {
-        id: id,
-        type: type,
-        count: matching.length,
-        validators: matching.map(function (pair) {
-          return {
-            idx: pair.i,
-            vid: pair.v && pair.v.id,
-            ctl: pair.v && pair.v.controltovalidate,
-            isvalid: pair.v && pair.v.isvalid
-          };
-        })
-      });
-    } catch (e) { }
-
     var anyValidityChanged = false;
 
-    // Run each validator and log before/after state
+    // Run each validator and track state
     matching.forEach(function (pair) {
       var v = pair.v;
       var was = !!(v && v.isvalid);
-
-      try {
-        console.log('[WET-PP] updatesOnChange: validator-before', {
-          id: id,
-          type: type,
-          idx: pair.i,
-          vid: v && v.id,
-          ctl: v && v.controltovalidate,
-          was: was
-        });
-      } catch (e) { }
 
       try {
         if (typeof window.ValidatorValidate === "function") {
@@ -725,27 +699,9 @@ function updatesOnChange(o, evt) {
           typeof window[v.clientvalidationfunction] === "function") {
           v.isvalid = !!window[v.clientvalidationfunction](v);
         }
-      } catch (e) {
-        console.log('[WET-PP] updatesOnChange: validator exception', {
-          id: id,
-          type: type,
-          idx: pair.i,
-          vid: v && v.id
-        }, e && e.message);
-      }
+      } catch (e) { }
 
       var now = !!(v && v.isvalid);
-      try {
-        console.log('[WET-PP] updatesOnChange: validator-after', {
-          id: id,
-          type: type,
-          idx: pair.i,
-          vid: v && v.id,
-          ctl: v && v.controltovalidate,
-          was: was,
-          now: now
-        });
-      } catch (e) { }
 
       if (was !== now) anyValidityChanged = true;
     });
@@ -761,7 +717,6 @@ function updatesOnChange(o, evt) {
           catch (_) { return false; }
         });
         if (bridgePair && bridgePair.v.isvalid === true) {
-          console.log('[WET-PP] updatesOnChange: file bridge authoritative valid, forcing others valid', { id: id });
           matching.forEach(function (p) {
             if (p !== bridgePair && p.v) {
               p.v.isvalid = true;
@@ -770,36 +725,18 @@ function updatesOnChange(o, evt) {
           });
           anyValidityChanged = true;
         }
-      } catch (e) {
-        console.log('[WET-PP] updatesOnChange: file bridge hardening error', { id: id }, e && e.message);
-      }
+      } catch (e) { }
     }
     // ---------- /FILE BRIDGE HARDENING ----------
 
     // global page validity refresh
     ValidatorUpdateIsValid();
-    try {
-      console.log('[WET-PP] updatesOnChange: ValidatorUpdateIsValid done', {
-        id: id,
-        type: type,
-        Page_IsValid: (typeof window.Page_IsValid !== 'undefined' ? window.Page_IsValid : undefined)
-      });
-    } catch (e) { }
 
     // If the field is invalid but nothing “changed” (e.g., duplicate state),
     // force a repaint so the inline error shows up during typing/clearing.
     if (!anyValidityChanged) {
       var currentlyInvalid = matching.some(function (pair) { return pair.v && pair.v.isvalid === false; });
       var hasInline = $('#' + id + '_label').find("span[id='" + id + "_err']").length > 0;
-      try {
-        console.log('[WET-PP] updatesOnChange: invalidState', {
-          id: id,
-          type: type,
-          anyValidityChanged: anyValidityChanged,
-          currentlyInvalid: currentlyInvalid,
-          hasInline: hasInline
-        });
-      } catch (e) { }
       if (currentlyInvalid && !hasInline) {
         anyValidityChanged = true;
       }
@@ -807,36 +744,18 @@ function updatesOnChange(o, evt) {
 
     // If all validators for this field are now valid → clear its inline UI.
     var allValidForField = matching.every(function (pair) { return !pair.v || pair.v.isvalid !== false; });
-    try {
-      console.log('[WET-PP] updatesOnChange: allValidForField', {
-        id: id,
-        type: type,
-        allValidForField: allValidForField
-      });
-    } catch (e) { }
-
     if (allValidForField) {
-      try {
-        console.log('[WET-PP] updatesOnChange: calling clearFieldErrorUI', { id: id, type: type });
-      } catch (e) { }
       clearFieldErrorUI(id, type);
     }
 
     // Always refresh the summary after any user-facing change, once validators are active.
     if (window.__validators_active && typeof globalEvaluationFunction === 'function') {
-      try {
-        console.log('[WET-PP] updatesOnChange: scheduling summary refresh', { id: id, type: type });
-      } catch (e) { }
       setTimeout(globalEvaluationFunction, 0);
     }
 
     // Re-fire a bubbling change only for real user actions (keeps PP logic in sync)
     if (evt && evt.isTrusted) {
       setTimeout(function () {
-        try {
-          console.log('[WET-PP] updatesOnChange: re-firing synthetic change', { id: id, type: type });
-        } catch (e) { }
-
         var elId = id;
 
         if (type === "date") {
@@ -874,9 +793,6 @@ function updatesOnChange(o, evt) {
 
   } finally {
     updatesOnChange._busy[id] = false;
-    try {
-      console.log('[WET-PP] updatesOnChange:end', { id: id, type: type });
-    } catch (e) { }
   }
 }
 
@@ -1055,7 +971,6 @@ function ensureLiveChangeHandlers() {
       addChangeEvents(id, type);
     } catch (e) {
       // keep going even if one field misbehaves
-      console.log('[WET-PP] ensureLiveChangeHandlers: addChangeEvents failed for', id, e && e.message);
     }
     seen.add(id);
   });
@@ -1081,9 +996,8 @@ function addValidators(fields) {
     window.__validators_focusSummaryNow = true;
     ensureLiveChangeHandlers();
   });
-  // Keep validation summary keyboard reachable (unchanged behaviour)
   var $summary = $('#ValidationSummaryEntityFormView');
-  if (!$summary.attr('tabindex')) $summary.attr('tabindex', '-1'); // 
+  $summary.removeAttr('tabindex');
 
   // A11y: ensure any UL in the summary is not role="presentation"
   $summary.find('ul[role="presentation"]').removeAttr('role');
@@ -1860,7 +1774,6 @@ window.BindRadioGroupLabel = {
 (function () {
   var previous = window.Page_ClientValidate;
   if (typeof previous !== 'function') {
-    console.log('[WET-PP] Page_ClientValidate not found; live handler wrapper skipped');
     return;
   }
 
@@ -1868,10 +1781,7 @@ window.BindRadioGroupLabel = {
     // First submit attempt from ANY caller (Next button, fake Next, other scripts)
     if (!window.__validators_active) {
       window.__validators_focusSummaryNow = true;
-      try { ensureLiveChangeHandlers(); } catch (e) {
-        console.log('[WET-PP] Page_ClientValidate wrapper: ensureLiveChangeHandlers error',
-                    e && e.message);
-      }
+      try { ensureLiveChangeHandlers(); } catch (e) { }
     }
 
     // Run the original Page_ClientValidate (this sets Page_IsValid etc.)

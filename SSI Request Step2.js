@@ -1,7 +1,10 @@
 // // SSI Step 2 Invoicing
+const SSI_STEP2_PAGE_TITLE = "{{snippets['ethi-ssi-step2']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP2_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
   debugger;
-  document.title =   "{{snippets['ethi-ssi-step2']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+  document.title = SSI_STEP2_PAGE_TITLE;
 
   $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step2']}}" + "</h2>");
   $(".tab-title").css("padding-bottom", "30px");
