@@ -30,8 +30,10 @@ window.addEventListener("load", (e) => {
     $("div.top").css('align-items', 'center').html("<h2>Confirmation</h2>");  
     
     $("#PreviousButton").removeAttr("onclick").val("{{snippets['ethi-print']}}");
-    const request = "{{snippets['ethi-ssi-request']}}";
-    $("#NextButton").val(request);
+    const lang = "{{ website.selected_language.code }}";
+    const anotherRequestLabel = /^fr/i.test(lang) ? 'Demander un autre SSI' : 'Request another SSI';
+    $("#NextButton").val(anotherRequestLabel);
+    $("#captcha").text(anotherRequestLabel);
 
     $('#PreviousButton').off('click') 
     .on('click', function (e) {
