@@ -240,31 +240,20 @@ body.read-only-summary .crmEntityFormView .table-info .validators {
 }
 
 /* Match GCWeb/WET link behaviour: hover = colour change only; focus = colour + ring */
-#ValidationSummaryEntityFormView a,
-#ValidationSummaryEntityFormView a:visited,
-.validation-summary-errors a,
-.validation-summary-errors a:visited,
-.wb-frmvld-list a,
-.wb-frmvld-list a:visited {
-  color: var(--bs-link-color, #295376) !important;
+#ValidationSummaryEntityFormView ul li a {
+  color: var(--bs-link-color, #295376);
   text-decoration: underline;
 }
 
-#ValidationSummaryEntityFormView a:hover,
-.validation-summary-errors a:hover,
-.wb-frmvld-list a:hover,
-#ValidationSummaryEntityFormView a:active,
-.validation-summary-errors a:active,
-.wb-frmvld-list a:active {
-  color: var(--bs-link-hover-color, #0535d2) !important;
+#ValidationSummaryEntityFormView ul li a:hover,
+#ValidationSummaryEntityFormView ul li a:active {
+  color: var(--bs-link-hover-color, #0535d2);
   outline: none;
   box-shadow: none;
 }
 
-#ValidationSummaryEntityFormView a:focus-visible,
-.validation-summary-errors a:focus-visible,
-.wb-frmvld-list a:focus-visible {
-  color: var(--bs-link-hover-color, #0535d2) !important;
+#ValidationSummaryEntityFormView ul li a:focus-visible {
+  color: var(--bs-link-hover-color, #0535d2);
   outline: 3px solid var(--pp-focus-border);
   outline-offset: 2px;
   box-shadow: none;
