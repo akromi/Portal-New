@@ -4,7 +4,6 @@ const SSI_STEP6_PAGE_TITLE = "{{snippets['ethi-ssi-request-confirmation']}}" + "
 document.title = SSI_STEP6_PAGE_TITLE;
 
 window.addEventListener("load", (e) => {
-    debugger;
     document.title = SSI_STEP6_PAGE_TITLE;
     //$("#wb-lng").attr("class","text-right");
    // $("#wb-srch").attr("class","col-lg-offset-4 col-md-offset-4 col-sm-offset-2 col-xs-12 col-sm-5 col-md-4");

@@ -94,11 +94,21 @@ function globalEvaluationFunction() {
   // Re-entrancy guard: prevent tight loops when renderer indirectly retriggers validation
   if (globalEvaluationFunction._busy) return true;
   globalEvaluationFunction._busy = true;
-  
+
   // Clear guard on next tick (after synchronous execution completes)
   setTimeout(function() {
     globalEvaluationFunction._busy = false;
   }, 0);
+
+  // Remove the platform headertext that injects a hidden announcement so we can
+  // control a single live region + heading for screen readers.
+  if (!globalEvaluationFunction._clearedHeadertext) {
+    var summaryEl = document.getElementById('ValidationSummaryEntityFormView');
+    if (summaryEl && typeof summaryEl.headertext !== 'undefined') {
+      try { summaryEl.headertext = ''; } catch (e) { /* ignore */ }
+    }
+    globalEvaluationFunction._clearedHeadertext = true;
+  }
 
   // 1) Clear older inline messages
   for (var i = 0; i < Page_Validators.length; i++) {
