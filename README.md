@@ -77,3 +77,9 @@ See [FILE-BRIDGE-USAGE.md](FILE-BRIDGE-USAGE.md) for complete documentation.
 
 - [File Bridge Usage Guide](FILE-BRIDGE-USAGE.md) - Complete guide for file validation bridge
 - See inline comments in each file for detailed documentation
+
+### Pull Request Notes
+
+When summarizing changes, focus the description on the files touched in the current branch. Avoid referencing historical fixes
+or previously merged updates in unrelated files so reviewers can quickly understand what changed and why without wading through
+past context.
