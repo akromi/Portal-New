@@ -7,6 +7,8 @@ if (document.title !== GI_STEP3_PAGE_TITLE) {
 
 window.addEventListener('load', () => {
   // Keep the heading in sync after load completes
+  
+  const GI_STEP3_PAGE_TITLE = "{{snippets['ethi-gi-step3-title']}}" + " - " + "{{snippets['ethi-gi-report-title']}}";
   document.title = GI_STEP3_PAGE_TITLE;
 
   const has$ = typeof window.jQuery === "function";
