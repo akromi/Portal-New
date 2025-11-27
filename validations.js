@@ -181,6 +181,7 @@ function globalEvaluationFunction() {
     if (!$live.attr('role')) $live.attr('role', 'alert');
 
     // Remove stale hidden text siblings so only one announcement source remains
+    $sum.children('.wb-inv, .sr-only, .visually-hidden, .sr-only-inline').not($live).remove();
     $sum.children('.wb-inv, .sr-only, .visually-hidden, .sr-only-inline').not($live).text('');
 
     $live.text(text);
