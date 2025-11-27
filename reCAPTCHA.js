@@ -218,6 +218,8 @@ function initializeCaptcha(sitekey) {
             }
         }
 
+        var keepBusy = false;
+
         try {
             // 1) Put the fake “Next” into busy state
             setBusy();
@@ -263,6 +265,8 @@ function initializeCaptcha(sitekey) {
             if (!isValid) {
                 recaptchaLog('verify:Page_IsValid:false');
                 // We do NOT call getToken or NextButton here.
+                clearBusy();
+                keepBusy = true; // avoid re-clearing in finally
                 return;
             }
 
@@ -295,6 +299,8 @@ function initializeCaptcha(sitekey) {
                     verified: results && results.hca_verified
                 });
                 alert(recaptchaGetText('thresholdError')); // bilingual threshold failure
+                clearBusy();
+                keepBusy = true; // avoid re-clearing in finally
                 return;
             }
 
@@ -303,6 +309,9 @@ function initializeCaptcha(sitekey) {
                 threshold: threshold,
                 score: results && results.hca_score
             });
+
+            // Keep the button in the busy state while the next step loads
+            keepBusy = true;
 
             if (next && next.length && typeof next[0].click === 'function') {
                 recaptchaLog('verify:next-click', { via: 'DOM click() on #NextButton' });
@@ -326,8 +335,10 @@ function initializeCaptcha(sitekey) {
             alert(recaptchaGetText('genericError'));   // bilingual generic failure
             throw err;
         } finally {
-            // Always restore the fake button text
-            clearBusy();
+            // Restore the fake button text unless we are intentionally keeping it busy
+            if (!keepBusy) {
+                clearBusy();
+            }
         }
     };
 
