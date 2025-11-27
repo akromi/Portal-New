@@ -1,8 +1,11 @@
-// SSI Step 3 
+// SSI Step 3
+const SSI_STEP3_PAGE_TITLE = "{{snippets['ethi-ssi-step3']}}" + " - " + "{{snippets['ethi-ssi-request-title']}}";
+document.title = SSI_STEP3_PAGE_TITLE;
+
 window.addEventListener("load", (e) => {
   debugger;
-  
-  document.title =   "{{snippets['ethi-ssi-step3']}}"  + " - " +  "{{snippets['ethi-ssi-request-title']}}";
+
+  document.title = SSI_STEP3_PAGE_TITLE;
 
   $("div.top").html("<h2 style = 'padding-bottom: 30px;' >" + "{{snippets['ethi-ssi-step3']}}"+"</h2>")
   $(".tab-title").css("padding-bottom", "30px");
